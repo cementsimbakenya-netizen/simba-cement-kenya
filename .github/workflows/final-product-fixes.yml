@@ -82,7 +82,7 @@ jobs:
           ]
           if not all(checks):
               raise SystemExit(f'Validation failed: {checks}')
-          print('VISIBLE PRODUCT PHOTOS VERIFIED', checks)
+          print('VISIBLE BARBED WIRE PHOTOS VERIFIED', checks)
 
       - name: Commit and push
         shell: bash
@@ -93,7 +93,7 @@ jobs:
           git status --short
           git diff --cached --check
           if git diff --cached --quiet; then
-            echo 'No visible Products changes detected.'
+            echo 'No visible Barbed Wire changes detected.'
             exit 1
           fi
           git commit -m 'Apply supplied photos to visible Barbed Wire products'
