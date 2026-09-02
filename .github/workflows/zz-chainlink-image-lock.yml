@@ -1,0 +1,100 @@
+name: Lock supplied Chainlink image
+
+on:
+  workflow_run:
+    workflows: ["Apply reference Products section"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lock-chainlink-image:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch Products workflow with supplied Chainlink photo
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('.github/workflows/reference-products.yml')
+          s = p.read_text(encoding='utf-8')
+
+          image = 'https://i.postimg.cc/L4f8GpwL/Screenshot-2026-09-02-133720.png'
+
+          replacements = {
+              r'<div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>4 FT × 18 M</span></div>': f'<div class="reference-product-image"><img src="{image}" alt="Chainlink 4ft × 18mts"></div>',
+              r'<div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>5 FT × 18 M</span></div>': f'<div class="reference-product-image"><img src="{image}" alt="Chainlink 5ft × 18mts"></div>',
+              r'<div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>6 FT × 18 M</span></div>': f'<div class="reference-product-image"><img src="{image}" alt="Chainlink 6ft × 18mts"></div>',
+              r'<div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>7 FT × 18 M</span></div>': f'<div class="reference-product-image"><img src="{image}" alt="Chainlink 7ft × 18mts"></div>',
+          }
+
+          for pattern, replacement in replacements.items():
+              s = s.replace(pattern, replacement)
+
+          # Keep the eight additional products permanently in the generated Products section.
+          extras = '''
+
+                <article class="reference-product-card">
+                  <div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>4 FT × 18 M</span></div>
+                  <div class="reference-product-body"><div class="reference-category">FENCING</div><h3>Chainlink 4ft × 18mts</h3><p>Chain-link fencing for property boundaries and general fencing work.</p><div class="reference-product-footer"><strong>KSh 2,000</strong><button class="reference-add reference-add-wide" onclick="addToCart('chain4','CHAINLINK 4FT X 18MTS',2000)">ADD TO CART <span>+</span></button></div></div>
+                </article>
+                <article class="reference-product-card">
+                  <div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>5 FT × 18 M</span></div>
+                  <div class="reference-product-body"><div class="reference-category">FENCING</div><h3>Chainlink 5ft × 18mts</h3><p>Chain-link fencing for secure boundaries and perimeter fencing applications.</p><div class="reference-product-footer"><strong>KSh 2,500</strong><button class="reference-add reference-add-wide" onclick="addToCart('chain5','CHAINLINK 5FT X 18MTS',2500)">ADD TO CART <span>+</span></button></div></div>
+                </article>
+                <article class="reference-product-card">
+                  <div class="reference-product-image reference-product-placeholder"><span>BARBED WIRE<br>240 M</span></div>
+                  <div class="reference-product-body"><div class="reference-category">FENCING</div><h3>Barbed Wire 240mts</h3><p>Practical barbed wire for boundary, security and agricultural fencing.</p><div class="reference-product-footer"><strong>KSh 1,900</strong><button class="reference-add reference-add-wide" onclick="addToCart('barb240','BARBED WIRE 240MTS',1900)">ADD TO CART <span>+</span></button></div></div>
+                </article>
+                <article class="reference-product-card">
+                  <div class="reference-product-image reference-product-placeholder"><span>PAVING BLOCKS<br>600 MM</span></div>
+                  <div class="reference-product-body"><div class="reference-category">PAVING</div><h3>Paving Blocks [600mm]</h3><p>Practical paving blocks for walkways, yards and other paving applications.</p><div class="reference-product-footer"><strong>KSh 650</strong><button class="reference-add reference-add-wide" onclick="addToCart('paving600','PAVING BLOCKS 600MM',650)">ADD TO CART <span>+</span></button></div></div>
+                </article>
+                <article class="reference-product-card">
+                  <div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>6 FT × 18 M</span></div>
+                  <div class="reference-product-body"><div class="reference-category">FENCING</div><h3>Chainlink 6ft × 18mts</h3><p>Higher chain-link fencing for secure boundaries and perimeter applications.</p><div class="reference-product-footer"><strong>KSh 3,000</strong><button class="reference-add reference-add-wide" onclick="addToCart('chain6','CHAINLINK 6FT X 18MTS',3000)">ADD TO CART <span>+</span></button></div></div>
+                </article>
+                <article class="reference-product-card">
+                  <div class="reference-product-image reference-product-placeholder"><span>BARBED WIRE<br>480 M</span></div>
+                  <div class="reference-product-body"><div class="reference-category">FENCING</div><h3>Barbed Wire 480mts</h3><p>Extended-length barbed wire for fencing, security and boundary work.</p><div class="reference-product-footer"><strong>KSh 3,400</strong><button class="reference-add reference-add-wide" onclick="addToCart('barb480','BARBED WIRE 480MTS',3400)">ADD TO CART <span>+</span></button></div></div>
+                </article>
+                <article class="reference-product-card">
+                  <div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>7 FT × 18 M</span></div>
+                  <div class="reference-product-body"><div class="reference-category">FENCING</div><h3>Chainlink 7ft × 18mts</h3><p>Tall chain-link fencing for higher perimeter and security requirements.</p><div class="reference-product-footer"><strong>KSh 3,500</strong><button class="reference-add reference-add-wide" onclick="addToCart('chain7','CHAINLINK 7FT X 18MTS',3500)">ADD TO CART <span>+</span></button></div></div>
+                </article>
+                <article class="reference-product-card">
+                  <div class="reference-product-image reference-product-placeholder"><span>BARBED WIRE<br>610 M</span></div>
+                  <div class="reference-product-body"><div class="reference-category">FENCING</div><h3>Barbed Wire 610mts</h3><p>Large-length barbed wire for extensive fencing and boundary projects.</p><div class="reference-product-footer"><strong>KSh 4,200</strong><button class="reference-add reference-add-wide" onclick="addToCart('barb610','BARBED WIRE 610MTS',4200)">ADD TO CART <span>+</span></button></div></div>
+                </article>'''
+
+          if "addToCart('chain4','CHAINLINK 4FT X 18MTS',2000)" not in s:
+              needle = "\n              </div>\n            </div>\n          </section>'''
+              if needle not in s:
+                  raise SystemExit('Products block ending not found')
+              s = s.replace(needle, extras + needle, 1)
+
+          p.write_text(s, encoding='utf-8')
+          print('CHAINLINK_IMAGE_LOCKED=', image in s)
+          print('ALL_CHAINLINK_SIZES=', all(x in s for x in ['CHAINLINK 4FT X 18MTS','CHAINLINK 5FT X 18MTS','CHAINLINK 6FT X 18MTS','CHAINLINK 7FT X 18MTS']))
+
+      - name: Commit workflow patch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/reference-products.yml
+          if git diff --cached --quiet; then
+            echo 'No workflow changes needed.'
+          else
+            git commit -m 'Lock supplied Chainlink product image and retain added products'
+            git push origin main
+          fi
