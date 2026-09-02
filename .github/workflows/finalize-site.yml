@@ -24,7 +24,7 @@ jobs:
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          # Keep the established homepage fixes stable.
+          # Keep established homepage fixes stable.
           s = re.sub(r'\.factory\s*\{[^}]*\}', ".factory{min-height:480px;background:#e9eef3;border-radius:2px;overflow:hidden}", s, count=1, flags=re.S|re.I)
           logo = '<a class="logo" href="#home" aria-label="Simba Cement home"><img src="https://i.postimg.cc/CKSsrtbF/Screenshot-2026-09-01-142431.png" alt="Simba Cement" class="logo-img"></a>'
           s = re.sub(r'<a\s+class=["\']logo["\'][^>]*>.*?</a>', logo, s, count=1, flags=re.S|re.I)
@@ -43,41 +43,48 @@ jobs:
           about = '''<section id="about"><div class="container about"><div><div class="eyebrow">ABOUT US</div><h2>BUILDING KENYA, ONE PROJECT AT A TIME.</h2><div class="redline"></div><p>Simba Cement is built around dependable construction materials for homes, businesses and infrastructure projects across Kenya. Production and supply under the Simba Cement brand began in 2010, supporting customers with locally available cement for everyday building needs.</p><p>As demand grew, National Cement Company Limited expanded grinding capacity fivefold in 2013. The business also developed local clinker production at Merueshi, Kenya, strengthening the local supply chain and reducing reliance on imported core raw materials.</p><p>Today, our focus is straightforward: dependable products, practical service and a convenient way for customers to place orders and speak directly with our sales team.</p><div class="stats"><div class="stat"><b>SERVICE LOCATIONS</b><span>Nairobi · Athi River (Off Lukenya Rd) · Nakuru · Rongai · Salgaa</span></div><div class="stat"><b>CUSTOMER ORDERS</b><span>0780 079 982 · WhatsApp</span></div></div><div class="actions" style="margin-top:22px"><a class="btn" href="#contact">CONTACT SALES →</a></div></div><div class="about-photo-wrap"><img class="about-photo" src="https://i.postimg.cc/9f623F43/Screenshot-2026-09-01-205703.png" alt="Simba Cement construction project"></div></div></section>'''
           s = re.sub(r'<section\b[^>]*\bid=["\']about["\'][^>]*>.*?</section>', about, s, count=1, flags=re.S|re.I)
 
-          # Product image support: image property renders the supplied image, otherwise the existing bag.
-          marker = "{id:'c325',name:'SIMBA CEMENT 32.5R',price:550,desc:'A dependable 32.5 strength-class cement for general building work, masonry, concrete and everyday construction applications.'}"
-          if marker in s and "image:'https://i.postimg.cc/HLjF3JtR/Screenshot-2026-09-01-205350.png'" not in s:
-              s = s.replace(marker, marker[:-1] + ",image:'https://i.postimg.cc/HLjF3JtR/Screenshot-2026-09-01-205350.png'}", 1)
-          marker = "{id:'p425',name:'SIMBA POWER 42.5N',price:680,desc:'A 42.5N cement suited to structural concrete and projects where higher strength performance is required.'}"
-          if marker in s and "image:'https://i.postimg.cc/Gmg5BL14/Screenshot-2026-09-01-205450.png'" not in s:
-              s = s.replace(marker, marker[:-1] + ",image:'https://i.postimg.cc/Gmg5BL14/Screenshot-2026-09-01-205450.png'}", 1)
-          marker = "{id:'d8',name:'REINFORCEMENT STEEL — D8',price:450,desc:'Reinforcement bar for reinforced-concrete work.'}"
-          if marker in s and "image:'https://i.postimg.cc/1XT8nVJy/Screenshot-2026-09-01-224305.png'" not in s:
-              s = s.replace(marker, marker[:-1] + ",image:'https://i.postimg.cc/1XT8nVJy/Screenshot-2026-09-01-224305.png'}", 1)
-          marker = "{id:'wire',name:'BINDING WIRE',price:3000,desc:'Binding wire for tying reinforcement and general construction work.'}"
-          if marker in s and "image:'https://i.postimg.cc/wTCkn1g8/Screenshot-2026-09-01-225251.png'" not in s:
-              s = s.replace(marker, marker[:-1] + ",image:'https://i.postimg.cc/wTCkn1g8/Screenshot-2026-09-01-225251.png'}", 1)
+          # Supplied actual product images.
+          product_images = {
+              'c325': 'https://i.postimg.cc/HLjF3JtR/Screenshot-2026-09-01-205350.png',
+              'p425': 'https://i.postimg.cc/Gmg5BL14/Screenshot-2026-09-01-205450.png',
+              'd8': 'https://i.postimg.cc/1XT8nVJy/Screenshot-2026-09-01-224305.png',
+              'wire': 'https://i.postimg.cc/wTCkn1g8/Screenshot-2026-09-01-225251.png',
+              'hoop': 'https://i.postimg.cc/90tWV4KG/Screenshot-2026-09-01-224641.png',
+          }
+          for pid,url in product_images.items():
+              m = re.search(r"\{id:'"+re.escape(pid)+r"',name:'([^']*)',price:([0-9]+),desc:'([^']*)'(?:,image:'[^']*')?\}", s)
+              if m:
+                  full=m.group(0)
+                  full=re.sub(r",image:'[^']*'","",full)
+                  repl=full[:-1]+",image:'"+url+"'}"
+                  s=s.replace(m.group(0),repl,1)
 
-          old_render = "<div class=\"product-img\"><div class=\"bag\"></div></div>"
-          new_render = "<div class=\"product-img\">${p.image ? `<img src=\\\"${p.image}\\\" alt=\\\"${p.name}\\\" style=\\\"width:100%;height:100%;object-fit:contain;background:#fff;display:block\\\">` : '<div class=\\\"bag\\\"></div>'}</div>"
-          if old_render in s:
-              s = s.replace(old_render, new_render, 1)
+          # Render product image when image property exists.
+          pattern = r'<div class="product-img">\$\{p\.image \? `.*?` : \'<div class="bag"></div>\'\}</div>'
+          existing = re.search(pattern, s, re.S)
+          render = '<div class="product-img">${p.image ? `<img src="${p.image}" alt="${p.name}">` : \'<div class="bag"></div>\'}</div>'
+          if not existing:
+              s=s.replace('<div class="product-img"><div class="bag"></div></div>', render, 1)
 
-          # Ensure Product section is immediately before About.
-          def section(text, sid):
-              m = re.search(r'<section\b[^>]*\bid=["\']'+re.escape(sid)+r'["\'][^>]*>.*?</section>', text, re.S|re.I)
-              if not m: raise SystemExit('Missing section '+sid)
+          # Ensure Products immediately before About.
+          def sec(text,sid):
+              m=re.search(r'<section\b[^>]*\bid=["\']'+re.escape(sid)+r'["\'][^>]*>.*?</section>',text,re.S|re.I)
+              if not m: raise SystemExit('Missing '+sid)
               return m
-          prod = section(s,'products'); aboutm=section(s,'about')
+          prod=sec(s,'products'); aboutm=sec(s,'about')
           if prod.start()>aboutm.start():
-              block=prod.group(0); s=s[:prod.start()]+s[prod.end():]; aboutm=section(s,'about'); s=s[:aboutm.start()]+block+'\n'+s[aboutm.start():]
+              block=prod.group(0);s=s[:prod.start()]+s[prod.end():];aboutm=sec(s,'about');s=s[:aboutm.start()]+block+'\n'+s[aboutm.start():]
 
-          # Add product-image styling and clean logo styling once.
-          s=s.replace('</style>', '<style>.product-img img{width:100%;height:100%;object-fit:contain;background:#fff;display:block}.about-photo-wrap{min-height:480px;overflow:hidden}.about-photo{width:100%;height:480px;object-fit:cover;display:block}.logo{background:#fff!important;border:0!important;box-shadow:none!important;min-width:230px!important;width:230px!important;height:82px!important;overflow:hidden!important}.logo-img{width:230px!important;height:82px!important;object-fit:contain!important;object-position:center!important;background:#fff!important;border:0!important;box-shadow:none!important}@media(max-width:900px){.logo{min-width:190px!important;width:190px!important;height:70px!important}.logo-img{width:190px!important;height:70px!important}.about-photo,.about-photo-wrap{height:360px;min-height:360px}}</style>', 1)
+          # Remove retired feature strip.
+          s = re.sub(r'<section\b[^>]*class=["\']feature["\'][^>]*>.*?</section>', '', s, flags=re.S|re.I)
+
+          css='''<style>.product-img img{width:100%;height:100%;object-fit:contain;background:#fff;display:block}.about-photo-wrap{min-height:480px;background:#e9eef3;overflow:hidden}.about-photo{width:100%;height:480px;display:block;object-fit:cover;object-position:center}.logo{background:#fff!important;border:0!important;outline:0!important;box-shadow:none!important;min-width:230px!important;width:230px!important;height:82px!important;overflow:hidden!important}.logo-img{width:230px!important;height:82px!important;display:block!important;object-fit:contain!important;object-position:center!important;background:#fff!important;border:0!important;outline:0!important;box-shadow:none!important}@media(max-width:900px){.logo{min-width:190px!important;width:190px!important;height:70px!important}.logo-img{width:190px!important;height:70px!important}.about-photo,.about-photo-wrap{height:360px;min-height:360px}}</style>'''
+          s=s.replace('</style>',css+'</style>',1)
 
           p.write_text(s,encoding='utf-8')
-          print('Product image 4 added:', "wTCkn1g8/Screenshot-2026-09-01-225251.png" in s)
-          print('Product 3 added:', "1XT8nVJy/Screenshot-2026-09-01-224305.png" in s)
-          print('Products before About:', s.find('id="products"') < s.find('id="about"'))
+          print('PRODUCT_HOOP_IMAGE=', product_images['hoop'] in s)
+          print('PRODUCT_BINDING_WIRE_IMAGE=', product_images['wire'] in s)
+          print('PRODUCTS_BEFORE_ABOUT=', s.find('id="products"') < s.find('id="about"'))
 
       - name: Commit final homepage
         shell: bash
@@ -85,5 +92,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Add supplied Binding Wire product image' || true
+          git commit -m 'Add supplied Hoop Iron product image' || true
           git push
