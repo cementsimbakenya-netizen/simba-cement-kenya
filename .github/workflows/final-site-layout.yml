@@ -29,8 +29,33 @@ jobs:
               ''
           )
 
-          css = '''\n<style id="final-hero-layout">\n.hero-carousel{min-height:760px!important}\n.hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}\n@media(max-width:900px){.hero-carousel{min-height:690px!important}}\n@media(max-width:600px){.hero-carousel{min-height:720px!important}}\n</style>\n<style id="solutions-words-only">\n#solutions .solutions-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;background:#171717!important}\n#solutions .solution{height:210px!important;background-image:none!important;background:#171717!important;display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;border-right:1px solid rgba(255,255,255,.16)!important}\n#solutions .solution:last-child{border-right:0!important}\n#solutions .solution:after{display:none!important}\n#solutions .solution h3{position:static!important;margin:0!important;color:#fff!important;text-align:center!important;font-size:18px!important;line-height:1.2!important;letter-spacing:.8px!important}\n@media(max-width:900px){#solutions .solutions-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}#solutions .solution{height:150px!important}}\n@media(max-width:560px){#solutions .solutions-grid{grid-template-columns:1fr!important}#solutions .solution{height:110px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.16)!important}}\n</style>\n'''
-          for marker in ['final-hero-layout','solutions-words-only']:
+          # Remove the WHERE TO BUY button completely from the header on every screen size.
+          html = html.replace(
+              '<a class="btn" href="#shop">📍 WHERE TO BUY</a>',
+              ''
+          )
+
+          css = '''
+<style id="final-hero-layout">
+.hero-carousel{min-height:760px!important}
+.hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}
+@media(max-width:900px){.hero-carousel{min-height:690px!important}}
+@media(max-width:600px){.hero-carousel{min-height:720px!important}}
+</style>
+<style id="solutions-words-only">
+#solutions .solutions-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;background:#171717!important}
+#solutions .solution{height:210px!important;background-image:none!important;background:#171717!important;display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;border-right:1px solid rgba(255,255,255,.16)!important}
+#solutions .solution:last-child{border-right:0!important}
+#solutions .solution:after{display:none!important}
+#solutions .solution h3{position:static!important;margin:0!important;color:#fff!important;text-align:center!important;font-size:18px!important;line-height:1.2!important;letter-spacing:.8px!important}
+@media(max-width:900px){#solutions .solutions-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}#solutions .solution{height:150px!important}}
+@media(max-width:560px){#solutions .solutions-grid{grid-template-columns:1fr!important}#solutions .solution{height:110px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.16)!important}}
+</style>
+<style id="header-where-to-buy-removed">
+header .nav>.btn[href="#shop"]{display:none!important}
+</style>
+'''
+          for marker in ['final-hero-layout','solutions-words-only','header-where-to-buy-removed']:
               start = html.find(f'<style id="{marker}">')
               if start != -1:
                   end = html.find('</style>', start) + len('</style>')
@@ -50,6 +75,8 @@ jobs:
               'BUILDING KENYA, ONE PROJECT AT A TIME.' in html,
               'final-hero-layout' in html,
               'solutions-words-only' in html,
+              'header-where-to-buy-removed' in html,
+              'href="#shop">📍 WHERE TO BUY' not in html,
           ]
           print('FINAL CHECKS:', checks)
           if not all(checks):
@@ -62,5 +89,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Make Solutions section words only'
+          git commit -m 'Remove Where To Buy button completely'
           git push origin main
