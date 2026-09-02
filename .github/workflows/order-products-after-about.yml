@@ -1,11 +1,11 @@
-name: Put Products after About
+name: Keep Products before About
 
 on:
-  workflow_dispatch:
   push:
     branches: [main]
     paths-ignore:
       - '.github/workflows/order-products-after-about.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,41 +16,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Move Products section after About section
+      - name: Move Products before About
         shell: python
         run: |
           from pathlib import Path
           import re
-
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-
-          def extract_section(html, section_id):
-              pat = re.compile(r'<section\b[^>]*\bid=["\']' + re.escape(section_id) + r'["\'][^>]*>.*?</section>', re.I | re.S)
-              m = pat.search(html)
+          def block(text, sid):
+              m = re.search(r'<section\b[^>]*\bid=["\']'+re.escape(sid)+r'["\'][^>]*>.*?</section>', text, re.S|re.I)
+              if not m: raise SystemExit(f'Missing #{sid}')
               return m
-
-          about = extract_section(s, 'about')
-          products = extract_section(s, 'products')
-          if not about or not products:
-              raise SystemExit('Could not locate both #about and #products sections')
-
-          # Remove the Products block, then re-find About and insert Products immediately after it.
-          products_text = products.group(0)
-          s_without = s[:products.start()] + s[products.end():]
-          about2 = extract_section(s_without, 'about')
-          if not about2:
-              raise SystemExit('About section disappeared during reorder')
-
-          insertion = about2.end()
-          s_final = s_without[:insertion] + '\n\n' + products_text + s_without[insertion:]
-          p.write_text(s_final, encoding='utf-8')
-          print('Products section moved immediately after About section.')
-
-      - name: Commit reorder
+          about = block(s,'about'); products = block(s,'products')
+          if products.start() > about.start():
+              pt = products.group(0)
+              s = s[:products.start()] + s[products.end():]
+              about = block(s,'about')
+              s = s[:about.start()] + pt + '\n' + s[about.start():]
+          p.write_text(s, encoding='utf-8')
+      - name: Commit corrected order
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Place Products section after About'
-          git push
+          if git diff --cached --quiet; then echo 'Products already before About.'; else git commit -m 'Keep Products before About Us'; git push; fi
