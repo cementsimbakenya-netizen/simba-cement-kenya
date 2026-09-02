@@ -30,6 +30,7 @@ jobs:
 
           chainlink_image = 'https://i.postimg.cc/L4f8GpwL/Screenshot-2026-09-02-133720.png'
           barbed610_image = 'https://i.postimg.cc/sDdq0ddt/Screenshot-2026-09-02-135513.png'
+          barbed480_image = 'https://i.postimg.cc/8PXWzDkP/Screenshot-2026-09-02-135758.png'
 
           def patch_card(source, heading, image, alt):
               card_pattern = re.compile(
@@ -40,7 +41,6 @@ jobs:
               match = card_pattern.search(source)
               if not match:
                   raise SystemExit(f'Product card not found: {heading}')
-
               card = match.group(1)
               image_pattern = re.compile(
                   r'<div class=["\']reference-product-image(?: +reference-product-placeholder)?["\']>.*?</div>',
@@ -61,80 +61,30 @@ jobs:
               html = patch_card(html, heading, chainlink_image, heading)
 
           html = patch_card(html, 'Barbed Wire 610mts', barbed610_image, 'Barbed Wire 610mts')
+          html = patch_card(html, 'Barbed Wire 480mts', barbed480_image, 'Barbed Wire 480mts')
 
           css = '''<style id="simba-final-product-fixes">
-          #products .reference-steel-list{
-            display:grid!important;
-            grid-template-columns:repeat(2,minmax(0,1fr))!important;
-            gap:6px!important;
-            margin-top:12px!important;
-            min-width:0!important;
-          }
-          #products .reference-steel-list>div{
-            display:grid!important;
-            grid-template-columns:auto minmax(0,1fr) auto!important;
-            gap:5px!important;
-            align-items:center!important;
-            min-width:0!important;
-            padding:5px 6px!important;
-            border:1px solid #e3e7eb!important;
-            border-radius:4px!important;
-            background:#fafafa!important;
-            overflow:hidden!important;
-          }
-          #products .reference-steel-list strong{
-            font-size:11px!important;
-            line-height:1!important;
-            white-space:nowrap!important;
-          }
-          #products .reference-steel-list span{
-            font-size:10px!important;
-            line-height:1!important;
-            white-space:nowrap!important;
-            overflow:hidden!important;
-            text-overflow:ellipsis!important;
-            min-width:0!important;
-          }
-          #products .reference-steel-list button{
-            font-size:9px!important;
-            line-height:1!important;
-            padding:4px 6px!important;
-            min-width:0!important;
-            min-height:0!important;
-            white-space:nowrap!important;
-            border:1px solid #d92a37!important;
-            background:#fff!important;
-            color:#c91f2d!important;
-          }
+          #products .reference-steel-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;margin-top:12px!important;min-width:0!important}
+          #products .reference-steel-list>div{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:5px!important;align-items:center!important;min-width:0!important;padding:5px 6px!important;border:1px solid #e3e7eb!important;border-radius:4px!important;background:#fafafa!important;overflow:hidden!important}
+          #products .reference-steel-list strong{font-size:11px!important;line-height:1!important;white-space:nowrap!important}
+          #products .reference-steel-list span{font-size:10px!important;line-height:1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;min-width:0!important}
+          #products .reference-steel-list button{font-size:9px!important;line-height:1!important;padding:4px 6px!important;min-width:0!important;min-height:0!important;white-space:nowrap!important;border:1px solid #d92a37!important;background:#fff!important;color:#c91f2d!important}
           #products .reference-product-image img[src*="L4f8GpwL"],
-          #products .reference-product-image img[src*="sDdq0ddt"]{
-            width:100%!important;
-            height:100%!important;
-            display:block!important;
-            object-fit:contain!important;
-            object-position:center!important;
-            background:#fff!important;
-          }
-          @media(max-width:560px){
-            #products .reference-steel-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important}
-            #products .reference-steel-list>div{grid-template-columns:auto minmax(0,1fr) auto!important;gap:3px!important;padding:4px 5px!important}
-            #products .reference-steel-list strong{font-size:9px!important}
-            #products .reference-steel-list span{font-size:8px!important}
-            #products .reference-steel-list button{font-size:8px!important;padding:3px 5px!important}
-          }
+          #products .reference-product-image img[src*="sDdq0ddt"],
+          #products .reference-product-image img[src*="8PXWzDkP"]{width:100%!important;height:100%!important;display:block!important;object-fit:contain!important;object-position:center!important;background:#fff!important}
+          @media(max-width:560px){#products .reference-steel-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important}#products .reference-steel-list>div{gap:3px!important;padding:4px 5px!important}#products .reference-steel-list strong{font-size:9px!important}#products .reference-steel-list span{font-size:8px!important}#products .reference-steel-list button{font-size:8px!important;padding:3px 5px!important}}
           </style>'''
 
           html = re.sub(r'<style id="simba-final-product-fixes">.*?</style>', '', html, flags=re.S | re.I)
-          if '</body>' in html:
-              html = html.replace('</body>', css + '\n</body>', 1)
-          else:
-              html += css
+          html = html.replace('</body>', css + '\n</body>', 1) if '</body>' in html else html + css
 
           checks = [
               html.count(chainlink_image) >= 4,
               barbed610_image in html,
-              'simba-final-product-fixes' in html,
+              barbed480_image in html,
               all(h in html for h in ['Chainlink 4ft × 18mts','Chainlink 5ft × 18mts','Chainlink 6ft × 18mts','Chainlink 7ft × 18mts']),
+              'Barbed Wire 480mts' in html,
+              'simba-final-product-fixes' in html,
           ]
           if not all(checks):
               raise SystemExit(f'Validation failed: {checks}')
@@ -149,6 +99,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No changes needed.'
           else
-            git commit -m 'Apply final product images and compact steel layout'
+            git commit -m 'Add supplied Barbed Wire 480mts product image'
             git push origin main
           fi
