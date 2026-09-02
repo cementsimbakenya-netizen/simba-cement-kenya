@@ -1,0 +1,76 @@
+name: Fullscreen hero carousel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply fullscreen hero carousel styling
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          css = '''<style id="fullscreen-hero-carousel">
+          .hero-carousel{
+            height:calc(100vh - 82px)!important;
+            min-height:720px!important;
+            max-height:none!important;
+          }
+          .hero-carousel .hero-slide{
+            inset:0!important;
+            background-size:cover!important;
+            background-position:center center!important;
+          }
+          .hero-carousel .hero-overlay{
+            background:linear-gradient(90deg,rgba(255,255,255,.78) 0%,rgba(255,255,255,.60) 34%,rgba(255,255,255,.16) 68%,rgba(18,26,34,.04) 100%)!important;
+          }
+          .hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}
+          .hero-carousel .hero-inner{padding:0!important;display:flex;align-items:center;min-height:inherit!important}
+          .hero-carousel .hero-content{height:100%!important;display:flex;align-items:center!important}
+          @media(max-width:900px){
+            .hero-carousel{height:calc(100vh - 70px)!important;min-height:650px!important}
+            .hero-carousel .hero-overlay{background:linear-gradient(180deg,rgba(255,255,255,.72) 0%,rgba(255,255,255,.48) 58%,rgba(18,26,34,.08) 100%)!important}
+          }
+          @media(max-width:600px){
+            .hero-carousel{height:calc(100vh - 70px)!important;min-height:680px!important}
+          }
+          </style>'''
+          marker='id="fullscreen-hero-carousel"'
+          if marker in html:
+              start=html.find('<style id="fullscreen-hero-carousel">')
+              end=html.find('</style>',start)+len('</style>')
+              html=html[:start]+css+html[end:]
+          else:
+              html=html.replace('</head>',css+'</head>',1)
+          checks=[
+              'id="fullscreen-hero-carousel"' in html,
+              'background-size:cover!important' in html,
+              'display:none!important' in html,
+              'height:calc(100vh - 82px)!important' in html,
+          ]
+          print('HERO CHECKS:',checks)
+          if not all(checks):
+              raise SystemExit('Fullscreen hero validation failed')
+          p.write_text(html,encoding='utf-8')
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Make hero carousel full screen and highly visible'
+          git push origin main
