@@ -24,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Remove Projects copy and apply final page content
+      - name: Remove Projects copy, apply Why Choose Us image and final page content
         shell: python
         run: |
           from pathlib import Path
@@ -33,18 +33,24 @@ jobs:
           p = Path('index.html')
           html = p.read_text(encoding='utf-8')
 
+          # Use the supplied Why Choose Us image.
+          html = html.replace(
+              "https://images.unsplash.com/photo-1516939884455-1445c8652f83?auto=format&fit=crop&w=1000&q=85",
+              "https://i.postimg.cc/1zvgDdzS/Screenshot-2026-09-01-205904.png"
+          )
+
           # Remove all Projects navigation links.
-          html = re.sub(r'<a\b[^>]*href=["\']#projects["\'][^>]*>.*?</a>', '', html, flags=re.I|re.S)
+          html = re.sub(r'<a\\b[^>]*href=["\\']#projects["\\'][^>]*>.*?</a>', '', html, flags=re.I|re.S)
 
           # Remove the complete Projects section, regardless of attribute order.
           html, n = re.subn(
-              r'\s*<section\b(?=[^>]*\bid=["\']projects["\'])(?=[^>]*\bclass=["\']projects["\'])[^>]*>.*?</section>\s*',
-              '\n', html, count=1, flags=re.I|re.S
+              r'\\s*<section\\b(?=[^>]*\\bid=["\\']projects["\\'])(?=[^>]*\\bclass=["\\']projects["\\'])[^>]*>.*?</section>\\s*',
+              '\\n', html, count=1, flags=re.I|re.S
           )
           if n != 1:
               html, n = re.subn(
-                  r'\s*<section\b(?=[^>]*\bid=["\']projects["\'])[^>]*>.*?</section>\s*',
-                  '\n', html, count=1, flags=re.I|re.S
+                  r'\\s*<section\\b(?=[^>]*\\bid=["\\']projects["\\'])[^>]*>.*?</section>\\s*',
+                  '\\n', html, count=1, flags=re.I|re.S
               )
 
           # Remove the old portfolio copy even if the section wrapper has already gone.
@@ -58,7 +64,7 @@ jobs:
               html = html.replace(text, '')
 
           # Remove standalone Kenya labels left behind by the deleted project cards.
-          html = re.sub(r'(<(?:p|span|small|div)\b[^>]*>)\s*Kenya\s*(</(?:p|span|small|div)>)', r'\1\2', html, flags=re.I)
+          html = re.sub(r'(<(?:p|span|small|div)\\b[^>]*>)\\s*Kenya\\s*(</(?:p|span|small|div)>)', r'\\1\\2', html, flags=re.I)
 
           # Replace News & Updates with text-only current items.
           news = '''
@@ -95,20 +101,20 @@ jobs:
           '''
 
           html, news_n = re.subn(
-              r'\s*<section\b[^>]*id=["\']news["\'][^>]*>.*?</section>\s*',
-              '\n' + news + '\n',
+              r'\\s*<section\\b[^>]*id=["\\']news["\\'][^>]*>.*?</section>\\s*',
+              '\\n' + news + '\\n',
               html, count=1, flags=re.I|re.S
           )
           if news_n != 1:
               raise SystemExit(f'News section was not found for replacement: {news_n}')
 
           # Remove obsolete project styling so no blank portfolio block remains.
-          html = re.sub(r'\.projects\{[^}]*\}', '', html)
-          html = re.sub(r'\.project-grid\{[^}]*\}', '', html)
-          html = re.sub(r'\.project\{[^}]*\}', '', html)
-          html = re.sub(r'\.project:after\{[^}]*\}', '', html)
-          html = re.sub(r'\.project div\{[^}]*\}', '', html)
-          html = re.sub(r'\.project:nth-child\(\d+\)\{[^}]*\}', '', html)
+          html = re.sub(r'\\.projects\\{[^}]*\\}', '', html)
+          html = re.sub(r'\\.project-grid\\{[^}]*\\}', '', html)
+          html = re.sub(r'\\.project\\{[^}]*\\}', '', html)
+          html = re.sub(r'\\.project:after\\{[^}]*\\}', '', html)
+          html = re.sub(r'\\.project div\\{[^}]*\\}', '', html)
+          html = re.sub(r'\\.project:nth-child\\(\\d+\\)\\{[^}]*\\}', '', html)
 
           lower = html.lower()
           forbidden = [
@@ -120,6 +126,7 @@ jobs:
               'structural works',
           ]
           checks = [
+              'https://i.postimg.cc/1zvgDdzS/Screenshot-2026-09-01-205904.png' in html,
               '<section id="news">' in lower,
               'latest simba cement updates.' in lower,
               all(x not in lower for x in forbidden),
