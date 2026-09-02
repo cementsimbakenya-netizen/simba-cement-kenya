@@ -1,4 +1,4 @@
-name: Restore complete site and update header
+name: Final site configuration
 
 on:
   push:
@@ -17,20 +17,47 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - name: Restore known complete site and update header
+      - name: Restore complete site and apply final header and hero
         shell: python
         run: |
           import subprocess
           from pathlib import Path
           p = Path('index.html')
-          base = subprocess.check_output(['git','show','b2825db396853ce6d5b3d7c6af04be712a925024:index.html'], text=True, encoding='utf-8')
-          html = base
+          html = subprocess.check_output(
+              ['git','show','b2825db396853ce6d5b3d7c6af04be712a925024:index.html'],
+              text=True, encoding='utf-8'
+          )
 
-          # New supplied logo.
-          html = html.replace('https://i.postimg.cc/CKSsrtbF/Screenshot-2026-09-01-142431.png', 'https://i.postimg.cc/RhRx14Vm/Screenshot-2026-09-02-151638.png')
+          # Apply the current supplied logo.
+          html = html.replace(
+              'https://i.postimg.cc/CKSsrtbF/Screenshot-2026-09-01-142431.png',
+              'https://i.postimg.cc/RhRx14Vm/Screenshot-2026-09-02-151638.png'
+          )
 
-          # Remove WHERE TO BUY completely from the header.
+          # Remove the header CTA everywhere.
           html = html.replace('<a class="btn" href="#shop">📍 WHERE TO BUY</a>', '')
+
+          # Keep the hero large like the supplied reference, but not browser-height.
+          hero_css = '''<style id="reference-hero-final">
+          .hero-carousel{height:650px!important;min-height:650px!important;max-height:650px!important;overflow:hidden!important}
+          .hero-carousel .hero-slide{inset:0!important;background-size:cover!important;background-position:center center!important;background-repeat:no-repeat!important}
+          .hero-carousel .hero-slide:after{background:linear-gradient(90deg,rgba(255,255,255,.70) 0%,rgba(255,255,255,.42) 30%,rgba(255,255,255,.08) 62%,rgba(18,26,34,.02) 100%)!important}
+          .hero-carousel .hero-overlay{display:none!important}
+          .hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}
+          .hero-carousel .hero-content{height:100%!important;display:flex!important;align-items:center!important}
+          .hero-carousel .hero-inner{padding:65px 0!important}
+          @media(max-width:900px){.hero-carousel{height:620px!important;min-height:620px!important;max-height:620px!important}.hero-carousel .hero-slide:after{background:linear-gradient(180deg,rgba(255,255,255,.70) 0%,rgba(255,255,255,.34) 55%,rgba(255,255,255,.06) 100%)!important}}
+          @media(max-width:600px){.hero-carousel{height:600px!important;min-height:600px!important;max-height:600px!important}}
+          </style>'''
+
+          # Clean out old hero/header override blocks, then add one authoritative block.
+          for marker in ['fullscreen-hero-carousel','final-hero-layout','final-header-logo','reference-hero-final']:
+              while f'id="{marker}"' in html:
+                  start = html.find(f'<style id="{marker}">')
+                  if start == -1: break
+                  end = html.find('</style>', start)
+                  if end == -1: break
+                  html = html[:start] + html[end+len('</style>'):]
 
           header_css = '''<style id="final-header-logo">
           .logo{min-width:270px!important;width:270px!important;height:82px!important;display:flex!important;align-items:center!important;background:#fff!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
@@ -43,31 +70,47 @@ jobs:
             .hamb{display:block!important;margin-left:auto!important;font-size:28px!important;background:none!important;border:0!important}
           }
           </style>'''
-          html = html.replace('</head>', header_css + '</head>', 1)
+          html = html.replace('</head>', header_css + hero_css + '</head>', 1)
+
+          # Preserve the words-only Solutions presentation.
+          solutions_css = '''<style id="solutions-words-only">
+          #solutions .solutions-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;background:#171717!important}
+          #solutions .solution{height:210px!important;background-image:none!important;background:#171717!important;display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;border-right:1px solid rgba(255,255,255,.16)!important}
+          #solutions .solution:last-child{border-right:0!important}
+          #solutions .solution:after{display:none!important}
+          #solutions .solution h3{position:static!important;margin:0!important;color:#fff!important;text-align:center!important;font-size:18px!important;line-height:1.2!important;letter-spacing:.8px!important}
+          @media(max-width:900px){#solutions .solutions-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}#solutions .solution{height:150px!important}}
+          @media(max-width:560px){#solutions .solutions-grid{grid-template-columns:1fr!important}#solutions .solution{height:110px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.16)!important}}
+          </style>'''
+          html = html.replace('</head>', solutions_css + '</head>', 1)
+
           p.write_text(html, encoding='utf-8')
 
           checks = [
               'https://i.postimg.cc/RhRx14Vm/Screenshot-2026-09-02-151638.png' in html,
-              'WHERE TO BUY' not in html,
+              'href="#shop">📍 WHERE TO BUY' not in html,
               'BUILT TO LAST.' in html,
-              'PRODUCTS' in html,
               'Simba Cement 32.5R' in html,
+              'Chainlink 4ft × 18mts' in html,
               'Barbed Wire 240mts' in html,
               'Barbed Wire 480mts' in html,
               'Barbed Wire 610mts' in html,
               'Paving Blocks [600mm]' in html,
               'BUILDING KENYA, ONE PROJECT AT A TIME.' in html,
+              'reference-hero-final' in html,
+              'final-header-logo' in html,
+              'solutions-words-only' in html,
           ]
-          print('HEADER/RESTORE CHECKS:', checks)
+          print('FINAL CHECKS:', checks)
           if not all(checks):
-              raise SystemExit('Restore/header validation failed')
+              raise SystemExit('Final site configuration validation failed')
 
-      - name: Commit restored site
+      - name: Commit final site
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Restore complete site and apply new header logo'
+          git commit -m 'Apply final site configuration'
           git push origin main
