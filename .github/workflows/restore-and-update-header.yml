@@ -1,0 +1,73 @@
+name: Restore complete site and update header
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Restore known complete site and update header
+        shell: python
+        run: |
+          import subprocess
+          from pathlib import Path
+          p = Path('index.html')
+          base = subprocess.check_output(['git','show','b2825db396853ce6d5b3d7c6af04be712a925024:index.html'], text=True, encoding='utf-8')
+          html = base
+
+          # New supplied logo.
+          html = html.replace('https://i.postimg.cc/CKSsrtbF/Screenshot-2026-09-01-142431.png', 'https://i.postimg.cc/RhRx14Vm/Screenshot-2026-09-02-151638.png')
+
+          # Remove WHERE TO BUY completely from the header.
+          html = html.replace('<a class="btn" href="#shop">📍 WHERE TO BUY</a>', '')
+
+          header_css = '''<style id="final-header-logo">
+          .logo{min-width:270px!important;width:270px!important;height:82px!important;display:flex!important;align-items:center!important;background:#fff!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
+          .logo-img{width:270px!important;height:82px!important;display:block!important;object-fit:contain!important;object-position:left center!important;background:#fff!important;border:0!important;box-shadow:none!important;transform:none!important}
+          header .nav>.btn{display:none!important}
+          @media(max-width:900px){
+            header .nav{height:70px!important;justify-content:space-between!important}
+            .logo{min-width:0!important;width:calc(100% - 58px)!important;height:70px!important}
+            .logo-img{width:100%!important;height:70px!important;object-fit:contain!important;object-position:left center!important}
+            .hamb{display:block!important;margin-left:auto!important;font-size:28px!important;background:none!important;border:0!important}
+          }
+          </style>'''
+          html = html.replace('</head>', header_css + '</head>', 1)
+          p.write_text(html, encoding='utf-8')
+
+          checks = [
+              'https://i.postimg.cc/RhRx14Vm/Screenshot-2026-09-02-151638.png' in html,
+              'WHERE TO BUY' not in html,
+              'BUILT TO LAST.' in html,
+              'PRODUCTS' in html,
+              'Simba Cement 32.5R' in html,
+              'Barbed Wire 240mts' in html,
+              'Barbed Wire 480mts' in html,
+              'Barbed Wire 610mts' in html,
+              'Paving Blocks [600mm]' in html,
+              'BUILDING KENYA, ONE PROJECT AT A TIME.' in html,
+          ]
+          print('HEADER/RESTORE CHECKS:', checks)
+          if not all(checks):
+              raise SystemExit('Restore/header validation failed')
+
+      - name: Commit restored site
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Restore complete site and apply new header logo'
+          git push origin main
