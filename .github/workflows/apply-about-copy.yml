@@ -19,20 +19,17 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-
-      - name: Replace About Us section with supplied copy
+      - name: Replace About Us section with supplied copy and image
         shell: python
         run: |
           from pathlib import Path
           import re
-
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
           pattern = re.compile(r'<section\b[^>]*\bid=["\']about["\'][^>]*>.*?</section>', re.S | re.I)
           m = pattern.search(s)
           if not m:
               raise SystemExit('Could not find #about section')
-
           replacement = '''<section id="about"><div class="container about"><div class="about-text">
           <div class="eyebrow">ABOUT US</div>
           <h2>BUILDING KENYA, ONE PROJECT AT A TIME.</h2>
@@ -42,22 +39,18 @@ jobs:
           <p>Today, our focus is straightforward: dependable products, practical service and a convenient way for customers to place orders and speak directly with our sales team.</p>
           <div class="stats">
             <div class="stat"><b>SERVICE LOCATIONS</b><span>Nairobi · Athi River (Off Lukenya Rd) · Nakuru · Rongai · Salgaa</span></div>
-            <div class="stat"><b>CUSTOMER ORDERS</b><span>0756 311 102 · WhatsApp</span></div>
+            <div class="stat"><b>CUSTOMER ORDERS</b><span>0780 079 982 · WhatsApp</span></div>
           </div>
           <div class="actions"><a class="btn" href="#contact">CONTACT SALES →</a></div>
-          </div><div class="factory" role="img" aria-label="Industrial construction environment"></div></div></section>'''
-
+          </div><div class="factory" role="img" aria-label="Simba Cement Kenya construction image"></div></div></section>'''
           s = s[:m.start()] + replacement + s[m.end():]
+          image = 'https://i.postimg.cc/9f623F43/Screenshot-2026-09-01-205703.png'
+          # Force the About image regardless of how the CSS is formatted.
+          s, n = re.subn(r'(\.factory\{[^}]*?background:url\()[^)]*(\)\s*center/cover)', lambda x: x.group(1) + "'" + image + "'" + x.group(2), s, count=1, flags=re.S)
           p.write_text(s, encoding='utf-8')
-
       - name: Commit About Us update
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          if git diff --cached --quiet; then
-            echo 'About Us already matches the supplied copy.'
-          else
-            git commit -m 'Use supplied About Us content [skip ci]'
-            git push origin HEAD:main
-          fi
+          if git diff --cached --quiet; then echo 'No About Us update required.'; else git commit -m 'Apply final About Us copy and supplied image'; git push origin HEAD:main; fi
