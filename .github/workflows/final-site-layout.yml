@@ -1,0 +1,67 @@
+name: Final site layout
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Apply final layout
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+
+          # Remove only the Products intro sentence requested by the owner.
+          html = html.replace(
+              '<p>Our core range of building and construction materials. Browse here while you scroll, or open the full shop to build your order.</p>',
+              ''
+          )
+
+          css = '''\n<style id="final-hero-layout">\n.hero-carousel{min-height:760px!important}\n.hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}\n@media(max-width:900px){.hero-carousel{min-height:690px!important}}\n@media(max-width:600px){.hero-carousel{min-height:720px!important}}\n</style>\n'''
+          if 'id="final-hero-layout"' in html:
+              start = html.find('<style id="final-hero-layout">')
+              end = html.find('</style>', start) + len('</style>')
+              html = html[:start] + css.strip() + html[end:]
+          else:
+              html = html.replace('</head>', css + '</head>', 1)
+
+          p.write_text(html, encoding='utf-8')
+
+          checks = [
+              'BUILT TO LAST.' in html,
+              'Simba Cement 32.5R' in html,
+              'Chainlink 4ft × 18mts' in html,
+              'Barbed Wire 240mts' in html,
+              'Barbed Wire 480mts' in html,
+              'Barbed Wire 610mts' in html,
+              'Paving Blocks [600mm]' in html,
+              'BUILDING KENYA, ONE PROJECT AT A TIME.' in html,
+              'Our core range of building and construction materials. Browse here while you scroll, or open the full shop to build your order.' not in html,
+              'final-hero-layout' in html,
+          ]
+          print('FINAL CHECKS:', checks)
+          if not all(checks):
+              raise SystemExit('Final site validation failed')
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Finalize site layout and restore full page'
+          git push origin main
