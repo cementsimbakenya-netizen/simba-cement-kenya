@@ -16,124 +16,74 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Repair and finalize homepage
+      - name: Finalize homepage
         shell: python
         run: |
           from pathlib import Path
           import re
-
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          # Repair the malformed .factory rule that was breaking the About layout.
-          s = re.sub(
-              r'\.factory\s*\{[^}]*\}',
-              ".factory{min-height:480px;background:#e9eef3;border-radius:2px;overflow:hidden}",
-              s,
-              count=1,
-              flags=re.S|re.I,
-          )
-
-          # Ensure the supplied logo is the header logo.
+          # Keep the established homepage fixes stable.
+          s = re.sub(r'\.factory\s*\{[^}]*\}', ".factory{min-height:480px;background:#e9eef3;border-radius:2px;overflow:hidden}", s, count=1, flags=re.S|re.I)
           logo = '<a class="logo" href="#home" aria-label="Simba Cement home"><img src="https://i.postimg.cc/CKSsrtbF/Screenshot-2026-09-01-142431.png" alt="Simba Cement" class="logo-img"></a>'
-          s, n = re.subn(r'<a\s+class=["\']logo["\'][^>]*>.*?</a>', logo, s, count=1, flags=re.S|re.I)
-          if n != 1:
-              raise SystemExit('Header logo element not found')
+          s = re.sub(r'<a\s+class=["\']logo["\'][^>]*>.*?</a>', logo, s, count=1, flags=re.S|re.I)
 
-          # Replace hero with the three supplied images and the requested copy.
-          hero = '''<section class="hero hero-carousel" id="home" aria-label="Simba Cement featured carousel">
-            <div class="hero-slide active" data-hero-slide style="background-image:url('https://i.postimg.cc/1zvgDdzS/Screenshot-2026-09-01-205904.png')"></div>
-            <div class="hero-slide" data-hero-slide style="background-image:url('https://i.postimg.cc/9f623F43/Screenshot-2026-09-01-205703.png')"></div>
-            <div class="hero-slide" data-hero-slide style="background-image:url('https://i.postimg.cc/5NCtjTVP/Screenshot-2026-09-01-205620.png')"></div>
-            <div class="hero-overlay"></div>
-            <div class="container hero-content"><div class="hero-inner">
-              <div class="eyebrow">SIMBA CEMENT · KENYA</div>
-              <h1>BUILT TO LAST.<br>BUILT FOR <em>GENERATIONS.</em></h1>
-              <p>Premium quality cement for strong and durable structures that stand the test of time.</p>
-              <div class="actions"><a class="btn" href="#products">OUR PRODUCTS →</a><a class="btn outline" href="#contact">FIND A DISTRIBUTOR →</a></div>
-            </div></div>
-            <button class="hero-arrow hero-prev" id="heroPrev" type="button" aria-label="Previous slide">‹</button>
-            <button class="hero-arrow hero-next" id="heroNext" type="button" aria-label="Next slide">›</button>
-            <div class="hero-dots" id="heroDots" aria-label="Choose hero slide"><button class="hero-dot active" type="button"></button><button class="hero-dot" type="button"></button><button class="hero-dot" type="button"></button></div>
-          </section>'''
-          s, n = re.subn(r'<section\b[^>]*\bid=["\']home["\'][^>]*>.*?</section>', hero, s, count=1, flags=re.S|re.I)
-          if n != 1: raise SystemExit('Home section not found')
+          # Actual hero images.
+          hero_urls = [
+              'https://i.postimg.cc/1zvgDdzS/Screenshot-2026-09-01-205904.png',
+              'https://i.postimg.cc/9f623F43/Screenshot-2026-09-01-205703.png',
+              'https://i.postimg.cc/5NCtjTVP/Screenshot-2026-09-01-205620.png',
+          ]
+          hero_slides = '\n'.join(f'<div class="hero-slide{ " active" if i==0 else "" }" data-hero-slide style="background-image:url(\'{u}\')"></div>' for i,u in enumerate(hero_urls))
+          hero = f'''<section class="hero hero-carousel" id="home" aria-label="Simba Cement featured carousel">\n{hero_slides}\n<div class="hero-overlay"></div><div class="container hero-content"><div class="hero-inner"><div class="eyebrow">SIMBA CEMENT · KENYA</div><h1>BUILT TO LAST.<br>BUILT FOR <em>GENERATIONS.</em></h1><p>Premium quality cement for strong and durable structures that stand the test of time.</p><div class="actions"><a class="btn" href="#products">OUR PRODUCTS →</a><a class="btn outline" href="#contact">FIND A DISTRIBUTOR →</a></div></div></div><button class="hero-arrow hero-prev" id="heroPrev" type="button">‹</button><button class="hero-arrow hero-next" id="heroNext" type="button">›</button><div class="hero-dots" id="heroDots"><button class="hero-dot active" type="button"></button><button class="hero-dot" type="button"></button><button class="hero-dot" type="button"></button></div></section>'''
+          s = re.sub(r'<section\b[^>]*\bid=["\']home["\'][^>]*>.*?</section>', hero, s, count=1, flags=re.S|re.I)
 
-          # Replace the About section completely, including the supplied photo.
-          about = '''<section id="about"><div class="container about">
-            <div>
-              <div class="eyebrow">ABOUT US</div>
-              <h2>BUILDING KENYA, ONE PROJECT AT A TIME.</h2>
-              <div class="redline"></div>
-              <p>Simba Cement is built around dependable construction materials for homes, businesses and infrastructure projects across Kenya. Production and supply under the Simba Cement brand began in 2010, supporting customers with locally available cement for everyday building needs.</p>
-              <p>As demand grew, National Cement Company Limited expanded grinding capacity fivefold in 2013. The business also developed local clinker production at Merueshi, Kenya, strengthening the local supply chain and reducing reliance on imported core raw materials.</p>
-              <p>Today, our focus is straightforward: dependable products, practical service and a convenient way for customers to place orders and speak directly with our sales team.</p>
-              <div class="stats">
-                <div class="stat"><b>SERVICE LOCATIONS</b><span>Nairobi · Athi River (Off Lukenya Rd) · Nakuru · Rongai · Salgaa</span></div>
-                <div class="stat"><b>CUSTOMER ORDERS</b><span>0780 079 982 · WhatsApp</span></div>
-              </div>
-              <div class="actions" style="margin-top:22px"><a class="btn" href="#contact">CONTACT SALES →</a></div>
-            </div>
-            <div class="about-photo-wrap"><img class="about-photo" src="https://i.postimg.cc/9f623F43/Screenshot-2026-09-01-205703.png" alt="Simba Cement construction project"></div>
-          </div></section>'''
-          s, n = re.subn(r'<section\b[^>]*\bid=["\']about["\'][^>]*>.*?</section>', about, s, count=1, flags=re.S|re.I)
-          if n != 1: raise SystemExit('About section not found')
+          # Supplied About Us copy and image.
+          about = '''<section id="about"><div class="container about"><div><div class="eyebrow">ABOUT US</div><h2>BUILDING KENYA, ONE PROJECT AT A TIME.</h2><div class="redline"></div><p>Simba Cement is built around dependable construction materials for homes, businesses and infrastructure projects across Kenya. Production and supply under the Simba Cement brand began in 2010, supporting customers with locally available cement for everyday building needs.</p><p>As demand grew, National Cement Company Limited expanded grinding capacity fivefold in 2013. The business also developed local clinker production at Merueshi, Kenya, strengthening the local supply chain and reducing reliance on imported core raw materials.</p><p>Today, our focus is straightforward: dependable products, practical service and a convenient way for customers to place orders and speak directly with our sales team.</p><div class="stats"><div class="stat"><b>SERVICE LOCATIONS</b><span>Nairobi · Athi River (Off Lukenya Rd) · Nakuru · Rongai · Salgaa</span></div><div class="stat"><b>CUSTOMER ORDERS</b><span>0780 079 982 · WhatsApp</span></div></div><div class="actions" style="margin-top:22px"><a class="btn" href="#contact">CONTACT SALES →</a></div></div><div class="about-photo-wrap"><img class="about-photo" src="https://i.postimg.cc/9f623F43/Screenshot-2026-09-01-205703.png" alt="Simba Cement construction project"></div></div></section>'''
+          s = re.sub(r'<section\b[^>]*\bid=["\']about["\'][^>]*>.*?</section>', about, s, count=1, flags=re.S|re.I)
 
-          # Move Products immediately before About.
-          def find_section(text, sid):
+          # Product image support: image property renders the supplied image, otherwise the existing bag.
+          marker = "{id:'c325',name:'SIMBA CEMENT 32.5R',price:550,desc:'A dependable 32.5 strength-class cement for general building work, masonry, concrete and everyday construction applications.'}"
+          if marker in s and "image:'https://i.postimg.cc/HLjF3JtR/Screenshot-2026-09-01-205350.png'" not in s:
+              s = s.replace(marker, marker[:-1] + ",image:'https://i.postimg.cc/HLjF3JtR/Screenshot-2026-09-01-205350.png'}", 1)
+          marker = "{id:'p425',name:'SIMBA POWER 42.5N',price:680,desc:'A 42.5N cement suited to structural concrete and projects where higher strength performance is required.'}"
+          if marker in s and "image:'https://i.postimg.cc/Gmg5BL14/Screenshot-2026-09-01-205450.png'" not in s:
+              s = s.replace(marker, marker[:-1] + ",image:'https://i.postimg.cc/Gmg5BL14/Screenshot-2026-09-01-205450.png'}", 1)
+          marker = "{id:'d8',name:'REINFORCEMENT STEEL — D8',price:450,desc:'Reinforcement bar for reinforced-concrete work.'}"
+          if marker in s and "image:'https://i.postimg.cc/1XT8nVJy/Screenshot-2026-09-01-224305.png'" not in s:
+              s = s.replace(marker, marker[:-1] + ",image:'https://i.postimg.cc/1XT8nVJy/Screenshot-2026-09-01-224305.png'}", 1)
+          marker = "{id:'wire',name:'BINDING WIRE',price:3000,desc:'Binding wire for tying reinforcement and general construction work.'}"
+          if marker in s and "image:'https://i.postimg.cc/wTCkn1g8/Screenshot-2026-09-01-225251.png'" not in s:
+              s = s.replace(marker, marker[:-1] + ",image:'https://i.postimg.cc/wTCkn1g8/Screenshot-2026-09-01-225251.png'}", 1)
+
+          old_render = "<div class=\"product-img\"><div class=\"bag\"></div></div>"
+          new_render = "<div class=\"product-img\">${p.image ? `<img src=\\\"${p.image}\\\" alt=\\\"${p.name}\\\" style=\\\"width:100%;height:100%;object-fit:contain;background:#fff;display:block\\\">` : '<div class=\\\"bag\\\"></div>'}</div>"
+          if old_render in s:
+              s = s.replace(old_render, new_render, 1)
+
+          # Ensure Product section is immediately before About.
+          def section(text, sid):
               m = re.search(r'<section\b[^>]*\bid=["\']'+re.escape(sid)+r'["\'][^>]*>.*?</section>', text, re.S|re.I)
               if not m: raise SystemExit('Missing section '+sid)
               return m
-          products = find_section(s, 'products')
-          aboutm = find_section(s, 'about')
-          if products.start() > aboutm.start():
-              block = products.group(0)
-              s = s[:products.start()] + s[products.end():]
-              aboutm = find_section(s, 'about')
-              s = s[:aboutm.start()] + block + '\n' + s[aboutm.start():]
+          prod = section(s,'products'); aboutm=section(s,'about')
+          if prod.start()>aboutm.start():
+              block=prod.group(0); s=s[:prod.start()]+s[prod.end():]; aboutm=section(s,'about'); s=s[:aboutm.start()]+block+'\n'+s[aboutm.start():]
 
-          # Remove retired feature strip if present.
-          s = re.sub(r'<section\b[^>]*class=["\']feature["\'][^>]*>.*?</section>', '', s, flags=re.S|re.I)
+          # Add product-image styling and clean logo styling once.
+          s=s.replace('</style>', '<style>.product-img img{width:100%;height:100%;object-fit:contain;background:#fff;display:block}.about-photo-wrap{min-height:480px;overflow:hidden}.about-photo{width:100%;height:480px;object-fit:cover;display:block}.logo{background:#fff!important;border:0!important;box-shadow:none!important;min-width:230px!important;width:230px!important;height:82px!important;overflow:hidden!important}.logo-img{width:230px!important;height:82px!important;object-fit:contain!important;object-position:center!important;background:#fff!important;border:0!important;box-shadow:none!important}@media(max-width:900px){.logo{min-width:190px!important;width:190px!important;height:70px!important}.logo-img{width:190px!important;height:70px!important}.about-photo,.about-photo-wrap{height:360px;min-height:360px}}</style>', 1)
 
-          # Navigation order: Products before About Us.
-          nav = '''<nav class="links" id="navlinks"><a class="active" href="#home">HOME</a><a href="#products">PRODUCTS</a><a href="#about">ABOUT US</a><a href="#solutions">SOLUTIONS</a><a href="#quality">QUALITY & SUSTAINABILITY</a><a href="#projects">PROJECTS</a><a href="#news">NEWS & UPDATES</a><a href="#contact">CONTACT US</a></nav>'''
-          s, n = re.subn(r'<nav\s+class=["\']links["\'][^>]*>.*?</nav>', nav, s, count=1, flags=re.S|re.I)
-          if n != 1: raise SystemExit('Navigation not found')
+          p.write_text(s,encoding='utf-8')
+          print('Product image 4 added:', "wTCkn1g8/Screenshot-2026-09-01-225251.png" in s)
+          print('Product 3 added:', "1XT8nVJy/Screenshot-2026-09-01-224305.png" in s)
+          print('Products before About:', s.find('id="products"') < s.find('id="about"'))
 
-          # About image styling and clean header/logo styling.
-          css = '''
-          .about-photo-wrap{min-height:480px;background:#e9eef3;overflow:hidden}
-          .about-photo{width:100%;height:480px;display:block;object-fit:cover;object-position:center}
-          .logo{background:#fff!important;border:0!important;outline:0!important;box-shadow:none!important;min-width:230px!important;width:230px!important;height:82px!important;overflow:hidden!important}
-          .logo-img{width:230px!important;height:82px!important;display:block!important;object-fit:contain!important;object-position:center!important;background:#fff!important;border:0!important;box-shadow:none!important;transform:none!important}
-          @media(max-width:900px){.logo{min-width:190px!important;width:190px!important;height:70px!important}.logo-img{width:190px!important;height:70px!important}.about-photo,.about-photo-wrap{height:360px;min-height:360px}}
-          .hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(255,255,255,.96) 0%,rgba(255,255,255,.88) 40%,rgba(255,255,255,.12) 75%,rgba(18,26,34,.08) 100%)}
-          '''
-          s = s.replace('</style>', css + '\n</style>', 1)
-
-          # Fix old business number references while preserving layout.
-          s = s.replace('0756 311 102','0780 079 982').replace('254756311102','254780079982')
-
-          # Hero carousel JS, replacing duplicate blocks if necessary.
-          s = re.sub(r'<script>\s*\(\(\)=>\{\s*const slides=\[\.\.\.document\.querySelectorAll\(\'\[data-hero-slide\]\'\).*?</script>', '', s, flags=re.S)
-          js = '''<script>
-          (()=>{const slides=[...document.querySelectorAll('[data-hero-slide]')],dots=[...document.querySelectorAll('#heroDots .hero-dot')],next=document.getElementById('heroNext'),prev=document.getElementById('heroPrev');if(!slides.length)return;let i=0,t;const show=n=>{i=(n+slides.length)%slides.length;slides.forEach((x,k)=>x.classList.toggle('active',k===i));dots.forEach((x,k)=>x.classList.toggle('active',k===i));};const restart=()=>{clearInterval(t);t=setInterval(()=>show(i+1),5000)};next?.addEventListener('click',()=>{show(i+1);restart()});prev?.addEventListener('click',()=>{show(i-1);restart()});dots.forEach((d,k)=>d.addEventListener('click',()=>{show(k);restart()}));show(0);restart()})();
-          </script>'''
-          if "document.querySelectorAll('[data-hero-slide]')" not in s:
-              s = s.replace('</body>', js + '</body>', 1)
-
-          p.write_text(s, encoding='utf-8')
-          print('FINALIZE COMPLETE')
-          print('products=',s.find('id="products"'),'about=',s.find('id="about"'))
-          print('about_image=', '9f623F43/Screenshot-2026-09-01-205703.png' in s)
-
-      - name: Commit finalized site and disable old mutators
+      - name: Commit final homepage
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          rm -f .github/workflows/about-photo-update.yml .github/workflows/add-hero-carousel.yml .github/workflows/apply-about-copy.yml .github/workflows/enforce-products-before-about.yml .github/workflows/ensure-products-before-about.yml .github/workflows/fix-homepage-order.yml .github/workflows/force-products-before-about.yml .github/workflows/logo-update.yml .github/workflows/order-products-after-about.yml .github/workflows/remove-feature-strip.yml
-          git add -A
-          git commit -m 'Finalize Simba Cement homepage layout' || true
+          git commit -m 'Add supplied Binding Wire product image' || true
           git push
