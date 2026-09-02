@@ -1,0 +1,88 @@
+name: Remove Projects from source
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  remove-projects:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Remove Projects directly from index.html
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          html = p.read_text(encoding='utf-8')
+          original = html
+
+          # Remove all navigation links that target the Projects section.
+          html = re.sub(
+              r'<a\b[^>]*href=["\']#projects["\'][^>]*>.*?</a>',
+              '', html, flags=re.I | re.S
+          )
+
+          # Remove the complete Projects section itself.
+          html, removed = re.subn(
+              r'\s*<section\b(?=[^>]*\bid=["\']projects["\'])[^>]*>.*?</section>\s*',
+              '\n', html, count=1, flags=re.I | re.S
+          )
+
+          if removed != 1:
+              raise SystemExit(f'Expected exactly 1 Projects section, removed {removed}')
+
+          # Remove any direct text leftovers from the requested Projects block.
+          leftovers = [
+              'Built around real construction needs.',
+              'Use this section for verified project photography and case studies as the portfolio grows.',
+              'RESIDENTIAL DEVELOPMENT',
+              'COMMERCIAL BUILDING',
+              'STRUCTURAL WORKS',
+          ]
+          for text in leftovers:
+              html = html.replace(text, '')
+
+          lower = html.lower()
+          checks = [
+              'id="projects"' not in lower,
+              "id='projects'" not in lower,
+              'href="#projects"' not in lower,
+              "href='#projects'" not in lower,
+              'built around real construction needs.' not in lower,
+              'residential development' not in lower,
+              'commercial building' not in lower,
+              'structural works' not in lower,
+          ]
+          print('PROJECT REMOVAL CHECKS:', checks)
+          if not all(checks):
+              raise SystemExit('Projects removal validation failed')
+
+          if html == original:
+              print('Projects already absent; nothing to commit.')
+          else:
+              p.write_text(html.rstrip() + '\n', encoding='utf-8')
+
+      - name: Commit source change
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- index.html; then
+            echo "No source change needed."
+            exit 0
+          fi
+          git add index.html
+          git commit -m "Remove Projects section from source [skip ci]"
+          git push origin HEAD:main
