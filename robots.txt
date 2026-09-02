@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://cementsimbakenya-netizen.github.io/simba-cement-kenya/sitemap.xml
