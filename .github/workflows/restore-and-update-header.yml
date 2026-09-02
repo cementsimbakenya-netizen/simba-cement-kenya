@@ -38,7 +38,7 @@ jobs:
           # Remove WHERE TO BUY completely.
           html = html.replace('<a class="btn" href="#shop">📍 WHERE TO BUY</a>', '')
 
-          # Remove PROJECTS navigation and the entire PROJECTS section.
+          # Remove PROJECTS navigation and the entire PROJECTS section completely.
           html = html.replace('<a href="#projects">PROJECTS</a>', '')
           html, removed_projects = re.subn(
               r'\s*<section class="projects" id="projects">.*?</section>\s*',
@@ -48,12 +48,12 @@ jobs:
               flags=re.S
           )
 
-          # Replace the old News & Updates section with current, text-only updates.
+          # Replace the old News & Updates section with current, text-only updates. No images.
           news_section = '''
     <section id="news"><div class="container"><div class="section-head"><div class="eyebrow">NEWS & UPDATES</div><h2>Latest Simba Cement updates.</h2><div class="redline"></div><p>Recent company-related and site updates gathered from public sources.</p></div><div class="news-grid" style="grid-template-columns:repeat(3,1fr)">
-      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>COMPANY NEWS · JUNE 22, 2026</small><h3>India’s High Commissioner visits Cemtech Eldoret (Simba Cement)</h3><p>The High Commissioner of India to Kenya visited Cemtech Eldoret, a key Devki Group manufacturing subsidiary associated with Simba Cement. The visit highlighted local manufacturing, industrialisation, employment and sustainable economic growth.</p></div><a href="https://cemtechlimited.com/2026/06/22/high-commissioner-of-india-to-kenya-visits-cemtech-eldoret-simba-cement/" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">READ SOURCE →</a></article>
-      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>SITE UPDATE · JULY 17, 2026</small><h3>Traffic works announced near Simba Cement</h3><p>KeNHA announced a temporary partial closure of the Emali–Isineti Road near Simba Cement for drainage culvert works, with traffic managed through a temporary diversion.</p></div><a href="https://www.standardmedia.co.ke/eastern/article/2001553080/kenha-closes-section-of-emali-isineti-road-for-three-weeks" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">READ SOURCE →</a></article>
-      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>OFFICIAL NEWS ROOM</small><h3>National Cement continues reporting Simba Cement milestones</h3><p>National Cement’s official news room lists Simba Cement-related updates including the Nakuru Grinding Plant opening and the company’s wider manufacturing development.</p></div><a href="https://nccke.com/news-room/" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">OFFICIAL NEWS ROOM →</a></article>
+      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>COMPANY NEWS · JUNE 22, 2026</small><h3>India’s High Commissioner visits Cemtech Eldoret</h3><p>The High Commissioner of India to Kenya visited Cemtech Eldoret, a Devki Group manufacturing operation associated with the Simba Cement business. The visit highlighted local manufacturing, industrialisation, employment and sustainable economic growth.</p></div><a href="https://cemtechlimited.com/2026/06/22/high-commissioner-of-india-to-kenya-visits-cemtech-eldoret-simba-cement/" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">READ SOURCE →</a></article>
+      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>INDUSTRY NEWS · AUGUST 28, 2026</small><h3>Devki Group expands cement manufacturing footprint</h3><p>Recent reporting says Devki Group’s National Cement business, which operates under the Simba Cement brand, remains part of major cement-industry expansion across East Africa.</p></div><a href="https://signstv.co.ke/three-tycoons-commit-sh133-billion-to-east-africas-cement-expansion" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">READ SOURCE →</a></article>
+      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>OFFICIAL COMPANY NEWS ROOM</small><h3>National Cement publishes Simba Cement news and events</h3><p>The official National Cement news room carries Simba Cement-related company updates, including the Nakuru Grinding Plant and wider manufacturing developments.</p></div><a href="https://nccke.com/news-room/" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">OFFICIAL NEWS ROOM →</a></article>
     </div></div></section>
 '''
           html, news_replaced = re.subn(
@@ -122,13 +122,13 @@ jobs:
               'Paving Blocks [600mm]' in html,
               'BUILDING KENYA, ONE PROJECT AT A TIME.' in html,
               'Latest Simba Cement updates.' in html,
-              'India’s High Commissioner visits Cemtech Eldoret (Simba Cement)' in html,
-              'Traffic works announced near Simba Cement' in html,
-              'National Cement continues reporting Simba Cement milestones' in html,
+              'India’s High Commissioner visits Cemtech Eldoret' in html,
+              'Devki Group expands cement manufacturing footprint' in html,
+              'National Cement publishes Simba Cement news and events' in html,
               'id="projects"' not in html,
               'PROJECTS</a>' not in html,
           ]
-          print('FINAL CHECKS:', checks)
+          print('FINAL CHECKS:', checks, 'removed_projects=', removed_projects, 'news_replaced=', news_replaced)
           if not all(checks):
               raise SystemExit('Final site configuration validation failed')
 
