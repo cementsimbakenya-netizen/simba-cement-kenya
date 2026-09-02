@@ -1,0 +1,41 @@
+name: Fix first product image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set first product image only
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          target = 'https://i.postimg.cc/HLjF3JtR/Screenshot-2026-09-01-205350.png'
+          # Remove this exact image from any product record first.
+          s = re.sub(r",?image:'" + re.escape(target) + r"'", "", s)
+          # Add it only to SIMBA CEMENT 32.5R.
+          marker = "{id:'c325',name:'SIMBA CEMENT 32.5R',price:550,desc:'A dependable 32.5 strength-class cement for general building work, masonry, concrete and everyday construction applications.'}"
+          if marker not in s:
+              raise SystemExit('32.5R product record not found')
+          replacement = marker[:-1] + ",image:'" + target + "'}"
+          s = s.replace(marker, replacement, 1)
+          # Make sure the first product renders exactly this image and no placeholder for it.
+          p.write_text(s, encoding='utf-8')
+          print('first_product_image_only=', s.count(target) == 1)
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Use supplied first product image only for Simba Cement 32.5R' || true
+          git push
