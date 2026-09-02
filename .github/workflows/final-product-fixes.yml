@@ -19,7 +19,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Apply exact product images
+      - name: Apply exact supplied product images
         shell: python
         run: |
           from pathlib import Path
@@ -32,6 +32,7 @@ jobs:
               'Barbed Wire 240mts': 'https://i.postimg.cc/tggVQ4Vn/Screenshot-2026-09-02-144319.png',
               'Barbed Wire 480mts': 'https://i.postimg.cc/8PXWzDkP/Screenshot-2026-09-02-135758.png',
               'Barbed Wire 610mts': 'https://i.postimg.cc/sDdq0ddt/Screenshot-2026-09-02-135513.png',
+              'Paving Blocks [600mm]': 'https://i.postimg.cc/Jh3YgKZt/Screenshot-2026-09-02-144841.png',
           }
 
           for heading, image in updates.items():
@@ -83,5 +84,5 @@ jobs:
             echo 'No changes required.'
             exit 0
           fi
-          git commit -m 'Apply supplied Barbed Wire product images'
+          git commit -m 'Apply supplied product images'
           git push origin main
