@@ -1,0 +1,50 @@
+name: Compact steel options after Products build
+
+on:
+  workflow_run:
+    workflows: ["Apply reference Products section"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  compact-steel:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Put D8-D25 into two columns
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          # The steel options remain six separate entries; only their layout changes.
+          compact_css = '''<style id="compact-steel-layout">
+          .reference-steel-list{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:22px!important}
+          .reference-steel-list>div{display:grid!important;grid-template-columns:1fr auto auto!important;gap:8px!important;align-items:center!important}
+          .reference-steel-list button{grid-column:auto!important;padding:7px 10px!important}
+          @media(max-width:560px){.reference-steel-list{grid-template-columns:1fr!important}}
+          </style>'''
+
+          s = re.sub(r'<style id="compact-steel-layout">.*?</style>', '', s, flags=re.S)
+          s = s.replace('</head>', compact_css + '\n</head>', 1)
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Display reinforcement steel options in two columns' || true
+          git push
