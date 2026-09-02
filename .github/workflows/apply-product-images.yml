@@ -1,0 +1,52 @@
+name: Apply supplied product images
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply product image 1
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          marker = '</body>'
+          if "product-actual-image-1" not in s:
+              script = '''<script id="product-actual-image-1">
+              (()=>{
+                const apply=()=>{
+                  const grid=document.getElementById('productGrid');
+                  const first=grid?.querySelector('.card .product-img');
+                  if(!first || first.dataset.actualApplied)return;
+                  first.dataset.actualApplied='1';
+                  first.innerHTML='<img src="https://i.postimg.cc/HLjF3JtR/Screenshot-2026-09-01-205350.png" alt="Simba Cement product" style="width:100%;height:100%;object-fit:contain;display:block;background:#fff">';
+                };
+                apply();
+                new MutationObserver(apply).observe(document.getElementById('productGrid')||document.body,{childList:true,subtree:true});
+              })();
+              </script>'''
+              s=s.replace(marker,script+'\n'+marker,1)
+              p.write_text(s,encoding='utf-8')
+
+      - name: Commit product image 1
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'Product image 1 already applied.'
+          else
+            git commit -m 'Use supplied first product image'
+            git push
+          fi
