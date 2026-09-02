@@ -1,0 +1,51 @@
+name: Set About Us photo
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-about-photo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replace About Us photo
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          new_url = 'https://i.postimg.cc/9f623F43/Screenshot-2026-09-01-205703.png'
+          # Target the image used by the .factory element in the About Us section.
+          s, n = re.subn(
+              r'(\.factory\{[^}]*?background:url\()[\'\"][^\'\"]+([\'\"])\)',
+              rf'\\1\'${new_url}\'\\2',
+              s,
+              count=1,
+              flags=re.S,
+          )
+          if n == 0:
+              # Fallback for background declaration formatting.
+              s, n = re.subn(
+                  r'(\.factory\{[^}]*?background:\s*url\()[^)]*\)'
+                  r'([^;]*;|[^}]*)',
+                  rf'\\1\'{new_url}\') center/cover\\2',
+                  s,
+                  count=1,
+                  flags=re.S,
+              )
+          if n == 0:
+              raise SystemExit('Could not locate About Us factory image CSS.')
+          p.write_text(s, encoding='utf-8')
+      - name: Commit About Us photo
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Use supplied image in About Us section'
+          git push
