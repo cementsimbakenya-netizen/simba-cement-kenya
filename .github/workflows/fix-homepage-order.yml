@@ -1,6 +1,8 @@
 name: Fix homepage section order
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -8,6 +10,7 @@ permissions:
 
 jobs:
   reorder:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,10 +24,11 @@ jobs:
 
           def section_by_id(text, section_id):
               marker = f'id="{section_id}"'
-              start = text.find('<section', text.find(marker) - 200)
-              if start < 0:
+              marker_pos = text.find(marker)
+              start = text.rfind('<section', 0, marker_pos + 1)
+              if marker_pos < 0 or start < 0:
                   raise SystemExit(f'Could not find section {section_id}')
-              end = text.find('</section>', start)
+              end = text.find('</section>', marker_pos)
               if end < 0:
                   raise SystemExit(f'Could not find closing tag for {section_id}')
               return start, end + len('</section>')
@@ -38,7 +42,7 @@ jobs:
               about_start, about_end = section_by_id(s, 'about')
               s = s[:about_end] + '\n' + products + s[about_end:]
 
-          # Ensure the old five-card feature strip is absent from the home page.
+          # Remove the old five-card feature strip if it is still present.
           m = re.search(r'<section\s+class="feature"[^>]*>.*?</section>', s, flags=re.S|re.I)
           if m:
               s = s[:m.start()] + s[m.end():]
@@ -50,5 +54,9 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet || git commit -m 'Place products after about and remove feature strip'
-          git push
+          if git diff --cached --quiet; then
+            echo 'No homepage order changes needed.'
+          else
+            git commit -m 'Place products after about and remove feature strip'
+            git push
+          fi
