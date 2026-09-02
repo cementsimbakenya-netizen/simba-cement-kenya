@@ -29,6 +29,7 @@ jobs:
         run: |
           from pathlib import Path
           import re
+          import html as html_lib
 
           p = Path('index.html')
           html = p.read_text(encoding='utf-8')
@@ -100,26 +101,295 @@ jobs:
           if news_n != 1:
               raise SystemExit(f'News section replacement failed: {news_n}')
 
-          # Remove obsolete project CSS rules from the published artifact.
-          html = re.sub(r'\.projects\{[^}]*\}', '', html)
-          html = re.sub(r'\.project-grid\{[^}]*\}', '', html)
-          html = re.sub(r'\.project\{[^}]*\}', '', html)
-          html = re.sub(r'\.project:after\{[^}]*\}', '', html)
-          html = re.sub(r'\.project div\{[^}]*\}', '', html)
-          html = re.sub(r'\.project:nth-child\(\d+\)\{[^}]*\}', '', html)
+          # Rename the products experience and make it link to a dedicated shop page.
+          html = re.sub(
+              r'(<a\b[^>]*href=["\'])#products(["\'][^>]*>).*?</a>',
+              r'\1shop.html\2SHOP / OUR PRODUCTS</a>',
+              html, flags=re.I | re.S
+          )
+          html = re.sub(r'(<h2[^>]*>)\s*Our Products\s*(</h2>)', r'\1SHOP / OUR PRODUCTS\2', html, count=1, flags=re.I)
 
+          # Add a clear shop hint and button beneath the products section intro.
+          products_match = re.search(r'<section\b(?=[^>]*\bid=["\']products["\'])[^>]*>.*?</section>', html, flags=re.I | re.S)
+          if products_match:
+              products_section = products_match.group(0)
+              if 'class="shop-hint"' not in products_section:
+                  hint = '''
+                  <div class="shop-hint" style="margin-top:14px;padding:16px 18px;background:#fff;border-left:4px solid var(--blue);font-weight:700">
+                    Click <strong>SHOP / OUR PRODUCTS</strong> to view all products on the dedicated shop page, adjust quantities and request your quotation on WhatsApp.
+                  </div>
+                  <a href="shop.html" class="btn" style="margin-top:14px">SHOP / OUR PRODUCTS →</a>
+                  '''
+                  products_section = re.sub(r'(</p>)', r'\1' + hint, products_section, count=1, flags=re.I)
+                  html = html[:products_match.start()] + products_section + html[products_match.end():]
+
+          # Remove the add-email UI block from the contact section, while keeping the section itself.
+          html = re.sub(
+              r'<[^>]+class=["\'][^"\']*(?:add-email|email-add|addemail)[^"\']*["\'][^>]*>.*?</[^>]+>',
+              '', html, flags=re.I | re.S
+          )
+          html = re.sub(r'<[^>]*>\s*(?:ADD\s+EMAIL|ADD\s+AN\s+EMAIL)\s*</[^>]*>', '', html, flags=re.I)
+
+          # Add modern ordering/customer-details UI and WhatsApp contact handling.
+          extra_style = '''
+          <style id="modern-order-ui">
+            .shop-hint{font-size:14px;color:#33404c}
+            .modern-order-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}
+            .modern-order-controls .qty-btn{width:38px;height:38px;border:1px solid #ccd4dc;background:#fff;border-radius:9px;font-size:20px;font-weight:900}
+            .modern-order-controls .qty-value{min-width:38px;text-align:center;font-weight:900;font-size:16px}
+            .modern-order-controls .add-quote-btn{flex:1;min-width:150px;border:0;background:var(--blue);color:#fff;border-radius:9px;padding:11px 14px;font-weight:900;cursor:pointer}
+            .modern-quote-panel{position:fixed;right:20px;bottom:92px;z-index:70;width:min(380px,calc(100vw - 40px));background:#fff;border:1px solid #dde4ea;box-shadow:0 18px 50px rgba(0,0,0,.16);border-radius:18px;padding:20px;display:none}
+            .modern-quote-panel.open{display:block}
+            .modern-quote-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+            .modern-quote-items{max-height:240px;overflow:auto;margin:14px 0}
+            .modern-quote-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid #eef1f4}
+            .modern-mini-controls{display:flex;gap:5px;align-items:center}
+            .modern-mini-controls button{width:28px;height:28px;border:1px solid #ccd4dc;background:#fff;border-radius:7px;font-weight:900}
+            .modern-quote-total{font-size:20px;font-weight:900;margin:12px 0}
+            .modern-quote-btn{width:100%;border:0;background:var(--blue);color:#fff;border-radius:10px;padding:13px;font-weight:900;cursor:pointer}
+            .customer-modal-backdrop{position:fixed;inset:0;background:rgba(8,15,22,.62);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+            .customer-modal-backdrop.open{display:flex}
+            .customer-modal{width:min(500px,100%);background:#fff;border-radius:20px;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,.28)}
+            .customer-modal h3{margin:0 0 8px;font-size:25px}
+            .customer-modal p{margin:0 0 18px;color:#66717c;font-size:14px}
+            .customer-modal input{width:100%;padding:13px 14px;border:1px solid #d4dce4;border-radius:10px;margin-bottom:10px}
+            .customer-modal-actions{display:flex;gap:10px;margin-top:8px}
+            .customer-modal-actions button{flex:1;border:0;border-radius:10px;padding:13px;font-weight:900;cursor:pointer}
+            .customer-cancel{background:#eef2f5}
+            .customer-send{background:#25d366;color:#fff}
+            @media(max-width:600px){.modern-quote-panel{right:10px;bottom:80px;width:calc(100vw - 20px)}}
+          </style>
+          '''
+          extra_script = '''
+          <script id="modern-order-system">
+          (function(){
+            const quote = [];
+            const currency = 'KSh';
+
+            function normalizePhone(v){
+              let s = String(v || '').replace(/[^0-9+]/g,'');
+              if(s.startsWith('00')) s=s.slice(2);
+              if(s.startsWith('+')) s=s.slice(1);
+              if(/^0?7\d{8}$/.test(s)) s='254'+s.slice(-9);
+              return s;
+            }
+
+            function findWhatsApp(){
+              const anchors=[...document.querySelectorAll('a[href]')];
+              const wa=anchors.find(a=>/wa\.me|whatsapp/i.test(a.href));
+              if(wa){
+                const m=wa.href.match(/(?:wa\.me\/|phone=)([0-9]+)/i);
+                if(m) return m[1];
+              }
+              const tel=anchors.find(a=>/^tel:/i.test(a.getAttribute('href')||''));
+              if(tel) return normalizePhone(tel.getAttribute('href').replace(/^tel:/i,''));
+              return '';
+            }
+
+            function customerModal(prefillMessage){
+              return new Promise(resolve=>{
+                let backdrop=document.getElementById('customer-modal-backdrop');
+                if(!backdrop){
+                  backdrop=document.createElement('div');
+                  backdrop.id='customer-modal-backdrop';
+                  backdrop.className='customer-modal-backdrop';
+                  backdrop.innerHTML=`<div class="customer-modal" role="dialog" aria-modal="true">
+                    <h3>Send your quotation on WhatsApp</h3>
+                    <p>Enter your name, phone number and location. We will prepare the WhatsApp message for you.</p>
+                    <input id="quote-name" type="text" placeholder="Full name" autocomplete="name">
+                    <input id="quote-phone" type="tel" placeholder="Phone number" autocomplete="tel">
+                    <input id="quote-location" type="text" placeholder="Delivery / site location" autocomplete="address-level2">
+                    <div class="customer-modal-actions">
+                      <button type="button" class="customer-cancel" id="quote-cancel">CANCEL</button>
+                      <button type="button" class="customer-send" id="quote-send">CONTINUE TO WHATSAPP</button>
+                    </div>
+                  </div>`;
+                  document.body.appendChild(backdrop);
+                  backdrop.querySelector('#quote-cancel').onclick=()=>{backdrop.classList.remove('open');resolve(null)};
+                  backdrop.querySelector('#quote-send').onclick=()=>{
+                    const name=backdrop.querySelector('#quote-name').value.trim();
+                    const phone=backdrop.querySelector('#quote-phone').value.trim();
+                    const location=backdrop.querySelector('#quote-location').value.trim();
+                    if(!name||!phone||!location){alert('Please enter your name, phone number and location.');return}
+                    backdrop.classList.remove('open');
+                    resolve({name,phone,location});
+                  };
+                }
+                backdrop.classList.add('open');
+              });
+            }
+
+            function quoteText(){
+              if(!quote.length) return 'Quotation request';
+              const lines=quote.map(i=>`- ${i.name} x${i.qty}${i.price?` (${i.price})`:''}`);
+              return lines.join('\n');
+            }
+
+            function renderPanel(){
+              let panel=document.getElementById('modern-quote-panel');
+              if(!panel){
+                panel=document.createElement('div');
+                panel.id='modern-quote-panel'; panel.className='modern-quote-panel';
+                document.body.appendChild(panel);
+              }
+              const total=quote.reduce((s,i)=>s+(i.numericPrice||0)*i.qty,0);
+              panel.innerHTML=`<div class="modern-quote-head"><strong>Quotation basket</strong><button type="button" id="quote-close" style="border:0;background:none;font-size:20px">×</button></div>
+                <div class="modern-quote-items">${quote.length?quote.map((i,idx)=>`<div class="modern-quote-row"><div><strong>${i.name}</strong><small style="display:block;color:#66717c">${i.price||''}</small></div><div class="modern-mini-controls"><button data-q="minus" data-i="${idx}">−</button><span>${i.qty}</span><button data-q="plus" data-i="${idx}">+</button></div></div>`).join(''):'<div style="padding:22px 0;color:#66717c">Your basket is empty.</div>'}</div>
+                <div class="modern-quote-total">Total: ${currency} ${total.toLocaleString()}</div>
+                <button type="button" class="modern-quote-btn" id="send-modern-quote">GET QUOTATION ON WHATSAPP</button>`;
+              panel.classList.add('open');
+              panel.querySelector('#quote-close').onclick=()=>panel.classList.remove('open');
+              panel.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{
+                const idx=Number(b.dataset.i); const type=b.dataset.q;
+                if(type==='plus') quote[idx].qty++;
+                else quote[idx].qty=Math.max(0,quote[idx].qty-1);
+                if(quote[idx].qty===0) quote.splice(idx,1);
+                renderPanel();
+              });
+              panel.querySelector('#send-modern-quote').onclick=async()=>{
+                if(!quote.length){alert('Add at least one product to your quotation.');return;}
+                await sendQuote('quotation');
+              };
+            }
+
+            async function sendQuote(kind){
+              const customer=await customerModal(kind==='contact'?'Contact request':'Quotation request');
+              if(!customer) return;
+              const wa=findWhatsApp();
+              if(!wa){alert('WhatsApp contact number was not found on this page. Please add your WhatsApp/tel link.');return;}
+              const prefix=kind==='contact'?'Hello Simba Cement, I would like to contact you.':'Hello Simba Cement, I would like a quotation.';
+              const cart=kind==='contact'?'':`\n\nProducts:\n${quoteText()}`;
+              const message=`${prefix}\n\nName: ${customer.name}\nPhone: ${customer.phone}\nLocation: ${customer.location}${cart}`;
+              const url=`https://wa.me/${wa}?text=${encodeURIComponent(message)}`;
+              window.open(url,'_blank','noopener');
+            }
+
+            function enhanceProducts(){
+              document.querySelectorAll('.product-body').forEach(body=>{
+                if(body.querySelector('.modern-order-controls')) return;
+                const name=(body.querySelector('h3')?.textContent||'Product').trim();
+                const price=(body.querySelector('.price')?.textContent||'').trim();
+                const numeric=(price.match(/[0-9][0-9,]*/)||['0'])[0].replace(/,/g,'');
+                const controls=document.createElement('div');
+                controls.className='modern-order-controls';
+                controls.innerHTML=`<button type="button" class="qty-btn" data-action="minus">−</button><span class="qty-value">0</span><button type="button" class="qty-btn" data-action="plus">+</button><button type="button" class="add-quote-btn">ADD TO QUOTATION</button>`;
+                body.appendChild(controls);
+                let qty=0;
+                const val=controls.querySelector('.qty-value');
+                controls.querySelector('[data-action="plus"]').onclick=()=>{qty++;val.textContent=qty};
+                controls.querySelector('[data-action="minus"]').onclick=()=>{qty=Math.max(0,qty-1);val.textContent=qty};
+                controls.querySelector('.add-quote-btn').onclick=()=>{
+                  const existing=quote.find(i=>i.name===name);
+                  if(existing) existing.qty+=Math.max(1,qty||1);
+                  else quote.push({name,price,numericPrice:Number(numeric)||0,qty:Math.max(1,qty||1)});
+                  renderPanel();
+                };
+              });
+            }
+
+            function enhanceContactForm(){
+              const form=document.querySelector('.contact form, .form form, form');
+              if(!form || form.dataset.whatsappEnhanced==='1') return;
+              form.dataset.whatsappEnhanced='1';
+              form.addEventListener('submit',e=>{e.preventDefault();sendQuote('contact')});
+            }
+
+            document.addEventListener('DOMContentLoaded',()=>{
+              enhanceProducts();
+              enhanceContactForm();
+              document.querySelectorAll('a[href*="#products"], a[href="products.html"]').forEach(a=>{a.href='shop.html';a.textContent='SHOP / OUR PRODUCTS'});
+              document.querySelectorAll('a,button').forEach(el=>{
+                if(/quotation|quote|whatsapp/i.test(el.textContent||'' ) && !el.closest('.modern-order-controls') && el.id!=='send-modern-quote'){
+                  el.addEventListener('click',e=>{
+                    if(el.closest('#modern-quote-panel')) return;
+                    e.preventDefault();sendQuote('quotation');
+                  });
+                }
+              });
+            });
+          })();
+          </script>
+          '''
+
+          html = html.replace('</head>', extra_style + '\n</head>')
+          html = html.replace('</body>', extra_script + '\n</body>')
+
+          # Build a dedicated shop page from the same products section and visual system.
+          style_match = re.search(r'<style\b[^>]*>.*?</style>', html, flags=re.I | re.S)
+          products_match = re.search(r'<section\b(?=[^>]*\bid=["\']products["\'])[^>]*>.*?</section>', html, flags=re.I | re.S)
+          if not style_match or not products_match:
+              raise SystemExit('Could not locate style or products section for shop page')
+          base_style = style_match.group(0)
+          products_section = products_match.group(0)
+          shop_head = '''
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Shop / Our Products | Simba Cement Kenya</title>
+            <meta name="description" content="Shop Simba Cement products, adjust quantities and request your quotation on WhatsApp.">
+          ''' + base_style + '''
+          <style>
+            body.shop-page{background:#fff}
+            .shop-header{background:#fff;border-bottom:1px solid #e6ebef;position:sticky;top:0;z-index:100}
+            .shop-nav{max-width:1180px;margin:auto;min-height:82px;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+            .shop-brand{font-weight:900;letter-spacing:.5px;color:var(--blue)}
+            .shop-links{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+            .shop-links a{font-size:12px;font-weight:900}
+            .shop-hero{background:#f4f7f9;padding:52px 20px 35px}
+            .shop-hero-inner{max-width:1180px;margin:auto}
+            .shop-hero h1{margin:0;font-size:48px;line-height:1}
+            .shop-hero p{color:#66717c;max-width:650px}
+            .shop-actions{display:flex;gap:10px;flex-wrap:wrap}
+            .shop-page .products{padding-top:55px}
+            .shop-page .section-head p{font-size:15px}
+            .shop-page .product-body{min-height:250px}
+            @media(max-width:700px){.shop-nav{align-items:flex-start;flex-direction:column}.shop-hero h1{font-size:38px}}
+          </style>
+          </head>
+          <body class="shop-page">
+            <header class="shop-header">
+              <div class="shop-nav">
+                <a class="shop-brand" href="index.html">SIMBA CEMENT KENYA</a>
+                <nav class="shop-links">
+                  <a href="index.html">HOME</a>
+                  <a href="shop.html">SHOP / OUR PRODUCTS</a>
+                  <a href="index.html#contact">CONTACT US</a>
+                </nav>
+              </div>
+            </header>
+            <section class="shop-hero">
+              <div class="shop-hero-inner">
+                <div class="eyebrow">SHOP / OUR PRODUCTS</div>
+                <h1>Choose your products.<br>Build your quotation.</h1>
+                <p>Use + and − to adjust quantities, add products to your quotation basket, then enter your name, phone number and location to continue directly to WhatsApp.</p>
+              </div>
+            </section>
+          '''
+          shop_tail = '''
+            <div id="shop-contact-note" class="container" style="padding:10px 20px 70px">
+              <a class="btn" href="index.html#contact">CONTACT US →</a>
+            </div>
+            ''' + extra_style + extra_script + '''
+          </body>
+          </html>
+          '''
+          shop_html = shop_head + products_section + shop_tail
+          Path('shop.html').write_text(shop_html, encoding='utf-8')
+
+          # Validation.
           lower = html.lower()
           checks = [
               new_why in html,
               old_why not in html,
-              'id="projects"' not in lower,
-              'href="#projects"' not in lower,
-              'built around real construction needs.' not in lower,
-              'residential development' not in lower,
-              'commercial building' not in lower,
-              'structural works' not in lower,
+              'shop.html' in lower,
+              'shop / our products' in lower,
+              'whatsapp' in lower,
+              'modern-order-system' in lower,
               '<section id="news">' in lower,
               'latest simba cement updates.' in lower,
+              Path('shop.html').exists(),
           ]
           print('FINAL PAGE CHECKS:', checks)
           if not all(checks):
