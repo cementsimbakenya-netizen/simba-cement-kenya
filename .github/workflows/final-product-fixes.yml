@@ -99,6 +99,8 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No changes needed.'
           else
-            git commit -m 'Add supplied Barbed Wire 480mts product image'
+            git commit -m 'Apply final product images'
             git push origin main
           fi
+
+# Product image lock includes Barbed Wire 480mts supplied photo.
