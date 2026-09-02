@@ -207,4 +207,17 @@ const heroSlides=[...document.querySelectorAll('.hero-slide')],heroDots=[...docu
 
 <script>
 (()=>{const slides=[...document.querySelectorAll('[data-hero-slide]')],dots=[...document.querySelectorAll('#heroDots .hero-dot')],next=document.getElementById('heroNext'),prev=document.getElementById('heroPrev');if(!slides.length)return;let i=0,t;const show=n=>{i=(n+slides.length)%slides.length;slides.forEach((x,k)=>x.classList.toggle('active',k===i));dots.forEach((x,k)=>x.classList.toggle('active',k===i));};const restart=()=>{clearInterval(t);t=setInterval(()=>show(i+1),5000)};next?.addEventListener('click',()=>{show(i+1);restart()});prev?.addEventListener('click',()=>{show(i-1);restart()});dots.forEach((d,k)=>d.addEventListener('click',()=>{show(k);restart()}));show(0);restart()})();
-</script></body></html>
+</script><script id="product-actual-image-1">
+    (()=>{
+      const apply=()=>{
+        const grid=document.getElementById('productGrid');
+        const first=grid?.querySelector('.card .product-img');
+        if(!first || first.dataset.actualApplied)return;
+        first.dataset.actualApplied='1';
+        first.innerHTML='<img src="https://i.postimg.cc/HLjF3JtR/Screenshot-2026-09-01-205350.png" alt="Simba Cement product" style="width:100%;height:100%;object-fit:contain;display:block;background:#fff">';
+      };
+      apply();
+      new MutationObserver(apply).observe(document.getElementById('productGrid')||document.body,{childList:true,subtree:true});
+    })();
+    </script>
+</body></html>
