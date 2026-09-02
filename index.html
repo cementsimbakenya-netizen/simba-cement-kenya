@@ -453,12 +453,7 @@
 }
 </style>
 
-<style id="final-hero-layout">
-.hero-carousel{min-height:760px!important}
-.hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}
-@media(max-width:900px){.hero-carousel{min-height:690px!important}}
-@media(max-width:600px){.hero-carousel{min-height:720px!important}}
-</style>
+
 <style id="final-header-logo">
 .logo{min-width:270px!important;width:270px!important;height:82px!important;display:flex!important;align-items:center!important;background:#fff!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
 .logo-img{width:270px!important;height:82px!important;display:block!important;object-fit:contain!important;object-position:left center!important;background:#fff!important;border:0!important;box-shadow:none!important;transform:none!important}
@@ -469,6 +464,24 @@ header .nav>.btn{display:none!important}
   .logo-img{width:100%!important;height:70px!important;object-fit:contain!important;object-position:left center!important}
   .hamb{display:block!important;margin-left:auto!important;font-size:28px!important;background:none!important;border:0!important}
 }
+</style><style id="reference-hero-final">
+.hero-carousel{height:650px!important;min-height:650px!important;max-height:650px!important;overflow:hidden!important}
+.hero-carousel .hero-slide{inset:0!important;background-size:cover!important;background-position:center center!important;background-repeat:no-repeat!important}
+.hero-carousel .hero-slide:after{background:linear-gradient(90deg,rgba(255,255,255,.70) 0%,rgba(255,255,255,.42) 30%,rgba(255,255,255,.08) 62%,rgba(18,26,34,.02) 100%)!important}
+.hero-carousel .hero-overlay{display:none!important}
+.hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}
+.hero-carousel .hero-content{height:100%!important;display:flex!important;align-items:center!important}
+.hero-carousel .hero-inner{padding:65px 0!important}
+@media(max-width:900px){.hero-carousel{height:620px!important;min-height:620px!important;max-height:620px!important}.hero-carousel .hero-slide:after{background:linear-gradient(180deg,rgba(255,255,255,.70) 0%,rgba(255,255,255,.34) 55%,rgba(255,255,255,.06) 100%)!important}}
+@media(max-width:600px){.hero-carousel{height:600px!important;min-height:600px!important;max-height:600px!important}}
+</style><style id="solutions-words-only">
+#solutions .solutions-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;background:#171717!important}
+#solutions .solution{height:210px!important;background-image:none!important;background:#171717!important;display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;border-right:1px solid rgba(255,255,255,.16)!important}
+#solutions .solution:last-child{border-right:0!important}
+#solutions .solution:after{display:none!important}
+#solutions .solution h3{position:static!important;margin:0!important;color:#fff!important;text-align:center!important;font-size:18px!important;line-height:1.2!important;letter-spacing:.8px!important}
+@media(max-width:900px){#solutions .solutions-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}#solutions .solution{height:150px!important}}
+@media(max-width:560px){#solutions .solutions-grid{grid-template-columns:1fr!important}#solutions .solution{height:110px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.16)!important}}
 </style></head>
 <body>
   <div class="topbar"><div class="container">SIMBA CEMENT · STRENGTH WITHIN <span style="float:right">Call / WhatsApp: 0780 079 982</span></div></div>
