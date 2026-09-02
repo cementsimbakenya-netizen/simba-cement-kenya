@@ -50,12 +50,12 @@ jobs:
             </div>
           </section>'''
 
-          s, n = re.subn(r'<section\\b[^>]*\\bid=["\\']home["\\'][^>]*>.*?</section>', hero, s, count=1, flags=re.S|re.I)
+          s, n = re.subn(r"<section\b[^>]*\bid=['\"]home['\"][^>]*>.*?</section>", hero, s, count=1, flags=re.S|re.I)
           if n != 1:
               raise SystemExit('Could not find the existing #home hero section')
 
           logo = '<a class="logo" href="#home" aria-label="Simba Cement home"><img src="https://i.postimg.cc/CKSsrtbF/Screenshot-2026-09-01-142431.png" alt="Simba Cement" class="logo-img"></a>'
-          s, n = re.subn(r'<a\\s+class=["\\']logo["\\'][^>]*>.*?</a>', logo, s, count=1, flags=re.S|re.I)
+          s, n = re.subn(r"<a\s+class=['\"]logo['\"][^>]*>.*?</a>", logo, s, count=1, flags=re.S|re.I)
           if n != 1:
               raise SystemExit('Could not find the header logo element')
 
@@ -78,7 +78,8 @@ jobs:
           '''
           s = s.replace('</style>', css + '\n  </style>', 1)
 
-          js = '''
+          if "document.querySelectorAll('[data-hero-slide]')" not in s:
+              js = '''
           <script>
           (()=>{
             const slides=[...document.querySelectorAll('[data-hero-slide]')];
@@ -93,7 +94,6 @@ jobs:
           })();
           </script>
           '''
-          if "document.querySelectorAll('[data-hero-slide]')" not in s:
               s = s.replace('</body>', js + '</body>', 1)
 
           p.write_text(s, encoding='utf-8')
