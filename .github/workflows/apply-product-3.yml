@@ -1,0 +1,51 @@
+name: Apply supplied third product image
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-product-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add product image 3
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          # Add the user's third product image to the third product record only.
+          third_url = 'https://i.postimg.cc/1XT8nVJy/Screenshot-2026-09-01-224305.png'
+          marker = "{id:'d8',name:'REINFORCEMENT STEEL — D8',price:450,desc:'Reinforcement bar for reinforced-concrete work.'}"
+          replacement = "{id:'d8',name:'REINFORCEMENT STEEL — D8',price:450,desc:'Reinforcement bar for reinforced-concrete work.',image:'" + third_url + "'}"
+          if marker in s:
+              s = s.replace(marker, replacement, 1)
+
+          # If product-image support is still using the placeholder bag, use the supplied image when present.
+          old = "<div class=\"product-img\"><div class=\"bag\"></div></div>"
+          new = "<div class=\"product-img\">${p.image ? `<img src=\\\"${p.image}\\\" alt=\\\"${p.name}\\\" style=\\\"width:100%;height:100%;object-fit:contain;background:#fff;display:block\\\">` : '<div class=\\\"bag\\\"></div>'}</div>"
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit product image
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No product 3 image change needed.'
+          else
+            git commit -m 'Use supplied third product image'
+            git push
+          fi
