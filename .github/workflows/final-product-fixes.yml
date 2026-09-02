@@ -32,29 +32,27 @@ jobs:
           barbed610_image = 'https://i.postimg.cc/sDdq0ddt/Screenshot-2026-09-02-135513.png'
           barbed480_image = 'https://i.postimg.cc/8PXWzDkP/Screenshot-2026-09-02-135758.png'
 
-          def replace_placeholder_card(source, heading, image, alt):
-              start = source.find('<article class="reference-product-card">', source.find('<h3>' + heading + '</h3>') - 1200)
-              if start < 0:
-                  start = source.find('<article class="reference-product-card">')
+          def replace_card_image(source, heading, image, alt):
+              h3_marker = '<h3>' + heading + '</h3>'
+              h3_pos = source.find(h3_marker)
+              if h3_pos < 0:
+                  raise SystemExit(f'Product heading not found: {heading}')
+              start = source.rfind('<article class="reference-product-card', 0, h3_pos)
               if start < 0:
                   raise SystemExit(f'Product card start not found: {heading}')
-              end = source.find('</article>', start)
+              end = source.find('</article>', h3_pos)
               if end < 0:
                   raise SystemExit(f'Product card end not found: {heading}')
               end += len('</article>')
               card = source[start:end]
-              if '<h3>' + heading + '</h3>' not in card:
-                  raise SystemExit(f'Product card not found: {heading}')
-              new = f'<div class="reference-product-image"><img src="{image}" alt="{alt}"></div>'
-              updated, changed = re.subn(
+              image_pattern = re.compile(
                   r'<div class="reference-product-image(?: reference-product-placeholder)?">.*?</div>',
-                  new,
-                  card,
-                  count=1,
-                  flags=re.S,
+                  re.S,
               )
+              new_image = f'<div class="reference-product-image"><img src="{image}" alt="{alt}"></div>'
+              updated, changed = image_pattern.subn(new_image, card, count=1)
               if changed != 1:
-                  raise SystemExit(f'Product image placeholder not found: {heading}')
+                  raise SystemExit(f'Product image container not found: {heading}')
               return source[:start] + updated + source[end:]
 
           for heading in [
@@ -63,17 +61,10 @@ jobs:
               'Chainlink 6ft × 18mts',
               'Chainlink 7ft × 18mts',
           ]:
-              # These already have a real image; this keeps them locked to the supplied chainlink photo.
-              pattern = re.compile(r'(<article class="reference-product-card">.*?<h3>' + re.escape(heading) + r'</h3>.*?</article>)', re.S)
-              m = pattern.search(html)
-              if not m:
-                  raise SystemExit(f'Chainlink card not found: {heading}')
-              card = m.group(1)
-              card = re.sub(r'<div class="reference-product-image(?: reference-product-placeholder)?">.*?</div>', f'<div class="reference-product-image"><img src="{chainlink_image}" alt="{heading}"></div>', card, count=1, flags=re.S)
-              html = html[:m.start(1)] + card + html[m.end(1):]
+              html = replace_card_image(html, heading, chainlink_image, heading)
 
-          html = replace_placeholder_card(html, 'Barbed Wire 480mts', barbed480_image, 'Barbed Wire 480mts')
-          html = replace_placeholder_card(html, 'Barbed Wire 610mts', barbed610_image, 'Barbed Wire 610mts')
+          html = replace_card_image(html, 'Barbed Wire 480mts', barbed480_image, 'Barbed Wire 480mts')
+          html = replace_card_image(html, 'Barbed Wire 610mts', barbed610_image, 'Barbed Wire 610mts')
 
           css = '''<style id="simba-final-product-fixes">
           #products .reference-steel-list{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;margin-top:12px!important;min-width:0!important}
@@ -90,8 +81,8 @@ jobs:
 
           checks = [
               html.count(chainlink_image) >= 4,
-              barbed480_image in html,
-              barbed610_image in html,
+              html.count(barbed480_image) >= 1,
+              html.count(barbed610_image) >= 1,
               'Barbed Wire 480mts' in html,
               'Barbed Wire 610mts' in html,
               'simba-final-product-fixes' in html,
