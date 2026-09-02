@@ -1,59 +1,20 @@
-name: Add supplied hero carousel
+name: Keep hero carousel configuration stable
 
 on:
-  push:
-    branches: [main]
-    paths-ignore:
-      - '.github/workflows/carousel-update.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  update-carousel:
-    if: github.actor != 'github-actions[bot]'
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Inject three supplied hero slides
+      - name: Verify supplied hero images are present
         run: |
-          python3 <<'PY'
-          from pathlib import Path
-          import re
-          p = Path('index.html')
-          s = p.read_text(encoding='utf-8')
-          images = [
-              'https://i.postimg.cc/1zvgDdzS/Screenshot-2026-09-01-205904.png',
-              'https://i.postimg.cc/9f623F43/Screenshot-2026-09-01-205703.png',
-              'https://i.postimg.cc/5NCtjTVP/Screenshot-2026-09-01-205620.png'
-          ]
-          hero = '''<section class="hero hero-carousel" id="home" aria-label="Simba Cement featured images">
-            <div class="hero-slides">
-              <article class="hero-slide is-active" style="background-image:linear-gradient(90deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.88) 40%,rgba(20,20,20,.18) 75%),url('{img1}')"></article>
-              <article class="hero-slide" style="background-image:linear-gradient(90deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.88) 40%,rgba(20,20,20,.18) 75%),url('{img2}')"></article>
-              <article class="hero-slide" style="background-image:linear-gradient(90deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.88) 40%,rgba(20,20,20,.18) 75%),url('{img3}')"></article>
-            </div>
-            <div class="container hero-inner">
-              <div class="eyebrow">SIMBA CEMENT · KENYA</div>
-              <h1>BUILT TO LAST.<br>BUILT FOR <em>GENERATIONS.</em></h1>
-              <p>Premium quality cement for strong and durable structures that stand the test of time.</p>
-              <div class="actions"><a class="btn" href="#products">OUR PRODUCTS →</a><a class="btn outline" href="#contact">FIND A DISTRIBUTOR →</a></div>
-            </div>
-            <button class="hero-arrow hero-prev" type="button" aria-label="Previous slide">‹</button>
-            <button class="hero-arrow hero-next" type="button" aria-label="Next slide">›</button>
-            <div class="hero-dots" aria-label="Choose slide"><button class="hero-dot is-active" aria-label="Slide 1"></button><button class="hero-dot" aria-label="Slide 2"></button><button class="hero-dot" aria-label="Slide 3"></button></div>
-          </section>'''.format(img1=images[0],img2=images[1],img3=images[2])
-          s = re.sub(r'<section class="hero[^>]*id="home".*?</section>', hero, s, count=1, flags=re.S)
-          css = '''\n    .hero-carousel{position:relative;overflow:hidden;background:#eef2f5}.hero-slides{position:absolute;inset:0}.hero-slide{position:absolute;inset:0;background-position:center;background-size:cover;background-repeat:no-repeat;opacity:0;transform:scale(1.015);transition:opacity .7s ease,transform 5.2s ease}.hero-slide.is-active{opacity:1;transform:scale(1)}.hero-carousel .hero-inner{position:relative;z-index:2}.hero-arrow{position:absolute;z-index:4;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:1px solid rgba(255,255,255,.75);background:rgba(18,26,34,.42);color:#fff;font-size:38px;line-height:34px;display:grid;place-items:center}.hero-prev{left:24px}.hero-next{right:24px}.hero-dots{position:absolute;z-index:4;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:8px}.hero-dot{width:10px;height:10px;padding:0;border-radius:50%;border:1px solid #fff;background:rgba(255,255,255,.45)}.hero-dot.is-active{background:#245a8d;border-color:#245a8d}.hero-carousel .hero-inner p{max-width:590px}.hero-carousel .btn.outline{background:rgba(255,255,255,.82)}\n'''
-          s = s.replace('</style>', css + '  </style>', 1)
-          js = '''\n<script>\n(function(){const root=document.querySelector('.hero-carousel');if(!root)return;const slides=[...root.querySelectorAll('.hero-slide')];const dots=[...root.querySelectorAll('.hero-dot')];let i=0,t;function go(n){i=(n+slides.length)%slides.length;slides.forEach((x,k)=>x.classList.toggle('is-active',k===i));dots.forEach((x,k)=>x.classList.toggle('is-active',k===i));}function restart(){clearInterval(t);t=setInterval(()=>go(i+1),5000)}root.querySelector('.hero-prev').onclick=()=>{go(i-1);restart()};root.querySelector('.hero-next').onclick=()=>{go(i+1);restart()};dots.forEach((d,k)=>d.onclick=()=>{go(k);restart()});restart();})();\n</script>\n'''
-          s = s.replace('</body>', js + '</body>', 1)
-          p.write_text(s,encoding='utf-8')
-          PY
-      - name: Commit carousel
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html
-          git diff --cached --quiet || git commit -m "Add supplied hero carousel images"
-          git push
+          test -f index.html
+          grep -q '1zvgDdzS/Screenshot-2026-09-01-205904.png' index.html
+          grep -q '9f623F43/Screenshot-2026-09-01-205703.png' index.html
+          grep -q '5NCtjTVP/Screenshot-2026-09-01-205620.png' index.html
+          grep -q 'CKSsrtbF/Screenshot-2026-09-01-142431.png' index.html
