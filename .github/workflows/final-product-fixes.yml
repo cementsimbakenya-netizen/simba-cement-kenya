@@ -1,4 +1,4 @@
-name: Final product fixes
+name: Apply supplied Barbed Wire 480mts photo
 
 on:
   push:
@@ -9,17 +9,17 @@ permissions:
   contents: write
 
 jobs:
-  fix-products:
+  fix-product:
     if: ${{ github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout latest main
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      - name: Apply Barbed Wire 480mts photo to the exact product card
+      - name: Apply exact Barbed Wire 480mts image
         shell: python
         run: |
           from pathlib import Path
@@ -27,54 +27,48 @@ jobs:
 
           path = Path('index.html')
           html = path.read_text(encoding='utf-8')
-
           heading = 'Barbed Wire 480mts'
           image = 'https://i.postimg.cc/8PXWzDkP/Screenshot-2026-09-02-135758.png'
 
-          section_start = html.find('<section class="products reference-products" id="products">')
-          if section_start < 0:
-              raise SystemExit('Visible Products section not found')
-          section_end = html.find('</section>', section_start)
-          if section_end < 0:
-              raise SystemExit('Visible Products section end not found')
-          section_end += len('</section>')
-          section = html[section_start:section_end]
+          h3 = f'<h3>{heading}</h3>'
+          pos = html.find(h3)
+          if pos < 0:
+              raise SystemExit('Barbed Wire 480mts heading not found in index.html')
 
-          marker = '<h3>' + heading + '</h3>'
-          h3_pos = section.find(marker)
-          if h3_pos < 0:
-              raise SystemExit(f'Product heading not found: {heading}')
-
-          card_start = section.rfind('<article class="reference-product-card', 0, h3_pos)
-          card_end = section.find('</article>', h3_pos)
+          card_start = html.rfind('<article class="reference-product-card', 0, pos)
+          card_end = html.find('</article>', pos)
           if card_start < 0 or card_end < 0:
-              raise SystemExit(f'Product card not found: {heading}')
+              raise SystemExit('Barbed Wire 480mts product card not found')
           card_end += len('</article>')
 
-          card = section[card_start:card_end]
-          image_re = re.compile(r'<div class="reference-product-image(?: reference-product-placeholder)?">.*?</div>', re.S)
-          replacement = f'<div class="reference-product-image"><img src="{image}" alt="{heading}"></div>'
-          card, changed = image_re.subn(replacement, card, count=1)
-          if changed != 1:
-              raise SystemExit(f'Product image container not found: {heading}')
+          card = html[card_start:card_end]
+          image_container = re.compile(
+              r'<div class="reference-product-image(?: reference-product-placeholder)?">.*?</div>',
+              re.S,
+          )
+          replacement = (
+              f'<div class="reference-product-image">'
+              f'<img src="{image}" alt="{heading}">'
+              f'</div>'
+          )
+          updated, count = image_container.subn(replacement, card, count=1)
+          if count != 1:
+              raise SystemExit('Barbed Wire 480mts image container not found')
 
-          section = section[:card_start] + card + section[card_end:]
-          html = html[:section_start] + section + html[section_end:]
+          html = html[:card_start] + updated + html[card_end:]
+          path.write_text(html, encoding='utf-8')
 
-          marker_comment = '<!-- barbed-wire-480-image-applied -->'
-          html = re.sub(r'\s*<!-- barbed-wire-480-image-applied -->', '', html)
-          html = html.replace('</body>', marker_comment + '\n</body>', 1)
-
+          verify = path.read_text(encoding='utf-8')
           checks = [
-              f'src="{image}"' in card,
-              heading in card,
-              marker_comment in html,
+              f'src="{image}"' in verify,
+              heading in verify,
+              'reference-product-placeholder' not in updated,
           ]
+          print('BARBED WIRE 480MTS CHECKS:', checks)
           if not all(checks):
               raise SystemExit(f'Validation failed: {checks}')
-          print('BARBED WIRE 480MTS VERIFIED:', checks)
 
-      - name: Commit and push the verified change
+      - name: Commit if needed
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
@@ -82,8 +76,8 @@ jobs:
           git add index.html
           git diff --cached --check
           if git diff --cached --quiet; then
-            echo 'No change was required.'
+            echo 'Barbed Wire 480mts image is already present in the source.'
             exit 0
           fi
-          git commit -m 'Apply Barbed Wire 480mts product image'
+          git commit -m 'Add Barbed Wire 480mts product image'
           git push origin main
