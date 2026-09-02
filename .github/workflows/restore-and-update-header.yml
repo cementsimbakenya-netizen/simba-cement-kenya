@@ -17,9 +17,10 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-      - name: Restore complete site and apply final header and hero
+      - name: Restore complete site and apply final configuration
         shell: python
         run: |
+          import re
           import subprocess
           from pathlib import Path
           p = Path('index.html')
@@ -28,16 +29,42 @@ jobs:
               text=True, encoding='utf-8'
           )
 
-          # Apply the current supplied logo.
+          # Current supplied logo.
           html = html.replace(
               'https://i.postimg.cc/CKSsrtbF/Screenshot-2026-09-01-142431.png',
               'https://i.postimg.cc/RhRx14Vm/Screenshot-2026-09-02-151638.png'
           )
 
-          # Remove the header CTA everywhere.
+          # Remove WHERE TO BUY completely.
           html = html.replace('<a class="btn" href="#shop">📍 WHERE TO BUY</a>', '')
 
-          # Keep the hero large like the supplied reference, but not browser-height.
+          # Remove PROJECTS navigation and the entire PROJECTS section.
+          html = html.replace('<a href="#projects">PROJECTS</a>', '')
+          html, removed_projects = re.subn(
+              r'\s*<section class="projects" id="projects">.*?</section>\s*',
+              '\n',
+              html,
+              count=1,
+              flags=re.S
+          )
+
+          # Replace the old News & Updates section with current, text-only updates.
+          news_section = '''
+    <section id="news"><div class="container"><div class="section-head"><div class="eyebrow">NEWS & UPDATES</div><h2>Latest Simba Cement updates.</h2><div class="redline"></div><p>Recent company-related and site updates gathered from public sources.</p></div><div class="news-grid" style="grid-template-columns:repeat(3,1fr)">
+      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>COMPANY NEWS · JUNE 22, 2026</small><h3>India’s High Commissioner visits Cemtech Eldoret (Simba Cement)</h3><p>The High Commissioner of India to Kenya visited Cemtech Eldoret, a key Devki Group manufacturing subsidiary associated with Simba Cement. The visit highlighted local manufacturing, industrialisation, employment and sustainable economic growth.</p></div><a href="https://cemtechlimited.com/2026/06/22/high-commissioner-of-india-to-kenya-visits-cemtech-eldoret-simba-cement/" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">READ SOURCE →</a></article>
+      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>SITE UPDATE · JULY 17, 2026</small><h3>Traffic works announced near Simba Cement</h3><p>KeNHA announced a temporary partial closure of the Emali–Isineti Road near Simba Cement for drainage culvert works, with traffic managed through a temporary diversion.</p></div><a href="https://www.standardmedia.co.ke/eastern/article/2001553080/kenha-closes-section-of-emali-isineti-road-for-three-weeks" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">READ SOURCE →</a></article>
+      <article class="news-card" style="padding:28px;display:flex;flex-direction:column;justify-content:space-between"><div><small>OFFICIAL NEWS ROOM</small><h3>National Cement continues reporting Simba Cement milestones</h3><p>National Cement’s official news room lists Simba Cement-related updates including the Nakuru Grinding Plant opening and the company’s wider manufacturing development.</p></div><a href="https://nccke.com/news-room/" target="_blank" rel="noopener" class="btn outline" style="align-self:flex-start;margin-top:18px">OFFICIAL NEWS ROOM →</a></article>
+    </div></div></section>
+'''
+          html, news_replaced = re.subn(
+              r'\s*<section id="news">.*?</section>\s*',
+              '\n' + news_section,
+              html,
+              count=1,
+              flags=re.S
+          )
+
+          # Authoritative hero and header styling.
           hero_css = '''<style id="reference-hero-final">
           .hero-carousel{height:650px!important;min-height:650px!important;max-height:650px!important;overflow:hidden!important}
           .hero-carousel .hero-slide{inset:0!important;background-size:cover!important;background-position:center center!important;background-repeat:no-repeat!important}
@@ -49,16 +76,6 @@ jobs:
           @media(max-width:900px){.hero-carousel{height:620px!important;min-height:620px!important;max-height:620px!important}.hero-carousel .hero-slide:after{background:linear-gradient(180deg,rgba(255,255,255,.70) 0%,rgba(255,255,255,.34) 55%,rgba(255,255,255,.06) 100%)!important}}
           @media(max-width:600px){.hero-carousel{height:600px!important;min-height:600px!important;max-height:600px!important}}
           </style>'''
-
-          # Clean out old hero/header override blocks, then add one authoritative block.
-          for marker in ['fullscreen-hero-carousel','final-hero-layout','final-header-logo','reference-hero-final']:
-              while f'id="{marker}"' in html:
-                  start = html.find(f'<style id="{marker}">')
-                  if start == -1: break
-                  end = html.find('</style>', start)
-                  if end == -1: break
-                  html = html[:start] + html[end+len('</style>'):]
-
           header_css = '''<style id="final-header-logo">
           .logo{min-width:270px!important;width:270px!important;height:82px!important;display:flex!important;align-items:center!important;background:#fff!important;border:0!important;box-shadow:none!important;overflow:hidden!important}
           .logo-img{width:270px!important;height:82px!important;display:block!important;object-fit:contain!important;object-position:left center!important;background:#fff!important;border:0!important;box-shadow:none!important;transform:none!important}
@@ -70,9 +87,6 @@ jobs:
             .hamb{display:block!important;margin-left:auto!important;font-size:28px!important;background:none!important;border:0!important}
           }
           </style>'''
-          html = html.replace('</head>', header_css + hero_css + '</head>', 1)
-
-          # Preserve the words-only Solutions presentation.
           solutions_css = '''<style id="solutions-words-only">
           #solutions .solutions-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;background:#171717!important}
           #solutions .solution{height:210px!important;background-image:none!important;background:#171717!important;display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;border-right:1px solid rgba(255,255,255,.16)!important}
@@ -82,8 +96,19 @@ jobs:
           @media(max-width:900px){#solutions .solutions-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}#solutions .solution{height:150px!important}}
           @media(max-width:560px){#solutions .solutions-grid{grid-template-columns:1fr!important}#solutions .solution{height:110px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.16)!important}}
           </style>'''
-          html = html.replace('</head>', solutions_css + '</head>', 1)
 
+          # Remove duplicate copies of our authoritative style blocks if they exist in the base.
+          for marker in ['fullscreen-hero-carousel','final-hero-layout','final-header-logo','reference-hero-final','solutions-words-only']:
+              while f'id="{marker}"' in html:
+                  start = html.find(f'<style id="{marker}">')
+                  if start == -1:
+                      break
+                  end = html.find('</style>', start)
+                  if end == -1:
+                      break
+                  html = html[:start] + html[end+len('</style>'):]
+
+          html = html.replace('</head>', header_css + hero_css + solutions_css + '</head>', 1)
           p.write_text(html, encoding='utf-8')
 
           checks = [
@@ -91,15 +116,17 @@ jobs:
               'href="#shop">📍 WHERE TO BUY' not in html,
               'BUILT TO LAST.' in html,
               'Simba Cement 32.5R' in html,
-              'Chainlink 4ft × 18mts' in html,
               'Barbed Wire 240mts' in html,
               'Barbed Wire 480mts' in html,
               'Barbed Wire 610mts' in html,
               'Paving Blocks [600mm]' in html,
               'BUILDING KENYA, ONE PROJECT AT A TIME.' in html,
-              'reference-hero-final' in html,
-              'final-header-logo' in html,
-              'solutions-words-only' in html,
+              'Latest Simba Cement updates.' in html,
+              'India’s High Commissioner visits Cemtech Eldoret (Simba Cement)' in html,
+              'Traffic works announced near Simba Cement' in html,
+              'National Cement continues reporting Simba Cement milestones' in html,
+              'id="projects"' not in html,
+              'PROJECTS</a>' not in html,
           ]
           print('FINAL CHECKS:', checks)
           if not all(checks):
@@ -112,5 +139,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'Apply final site configuration'
+          git commit -m 'Add latest text-only news and remove Projects section'
           git push origin main
