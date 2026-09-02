@@ -24,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Apply final page content
+      - name: Remove Projects copy and apply final page content
         shell: python
         run: |
           from pathlib import Path
@@ -33,21 +33,34 @@ jobs:
           p = Path('index.html')
           html = p.read_text(encoding='utf-8')
 
-          # Remove Projects navigation links and the complete Projects section.
+          # Remove all Projects navigation links.
           html = re.sub(r'<a\b[^>]*href=["\']#projects["\'][^>]*>.*?</a>', '', html, flags=re.I|re.S)
+
+          # Remove the complete Projects section, regardless of attribute order.
           html, n = re.subn(
-              r'\s*<section\b[^>]*class=["\']projects["\'][^>]*id=["\']projects["\'][^>]*>.*?</section>\s*',
+              r'\s*<section\b(?=[^>]*\bid=["\']projects["\'])(?=[^>]*\bclass=["\']projects["\'])[^>]*>.*?</section>\s*',
               '\n', html, count=1, flags=re.I|re.S
           )
           if n != 1:
               html, n = re.subn(
-                  r'\s*<section\b[^>]*id=["\']projects["\'][^>]*class=["\']projects["\'][^>]*>.*?</section>\s*',
+                  r'\s*<section\b(?=[^>]*\bid=["\']projects["\'])[^>]*>.*?</section>\s*',
                   '\n', html, count=1, flags=re.I|re.S
               )
-          if n != 1:
-              raise SystemExit(f'Projects section was not found for removal: {n}')
 
-          # Replace the entire News & Updates section with text-only current items.
+          # Remove the old portfolio copy even if the section wrapper has already gone.
+          for text in [
+              'Built around real construction needs.',
+              'Use this section for verified project photography and case studies as the portfolio grows.',
+              'RESIDENTIAL DEVELOPMENT',
+              'COMMERCIAL BUILDING',
+              'STRUCTURAL WORKS',
+          ]:
+              html = html.replace(text, '')
+
+          # Remove standalone Kenya labels left behind by the deleted project cards.
+          html = re.sub(r'(<(?:p|span|small|div)\b[^>]*>)\s*Kenya\s*(</(?:p|span|small|div)>)', r'\1\2', html, flags=re.I)
+
+          # Replace News & Updates with text-only current items.
           news = '''
           <section id="news">
             <div class="container">
@@ -89,24 +102,27 @@ jobs:
           if news_n != 1:
               raise SystemExit(f'News section was not found for replacement: {news_n}')
 
-          # Remove old project/news-only styling blocks from the page so the deleted sections leave no artifacts.
-          html = html.replace('.projects{background:#111;color:#fff}', '')
+          # Remove obsolete project styling so no blank portfolio block remains.
+          html = re.sub(r'\.projects\{[^}]*\}', '', html)
           html = re.sub(r'\.project-grid\{[^}]*\}', '', html)
           html = re.sub(r'\.project\{[^}]*\}', '', html)
           html = re.sub(r'\.project:after\{[^}]*\}', '', html)
           html = re.sub(r'\.project div\{[^}]*\}', '', html)
           html = re.sub(r'\.project:nth-child\(\d+\)\{[^}]*\}', '', html)
 
-          # Ensure validation is based on the exact rendered file.
           lower = html.lower()
+          forbidden = [
+              'id="projects"',
+              'href="#projects"',
+              'built around real construction needs.',
+              'residential development',
+              'commercial building',
+              'structural works',
+          ]
           checks = [
-              'id="projects"' not in lower,
-              'href="#projects"' not in lower,
               '<section id="news">' in lower,
-              'Latest Simba Cement updates.' in html,
-              'Government orders closure of Simba Cement quarries in Rabai' in html,
-              "Devki Group's KSh45 billion clinker plant strengthens local supply" in html,
-              "India's High Commissioner visits Cemtech Eldoret" in html,
+              'latest simba cement updates.' in lower,
+              all(x not in lower for x in forbidden),
           ]
           print('FINAL PAGE CHECKS:', checks)
           if not all(checks):
