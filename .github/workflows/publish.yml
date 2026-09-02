@@ -36,8 +36,10 @@ jobs:
           h=re.sub(r'<label[^>]*>\s*Email.*?</label>','',h,flags=re.I|re.S)
           h=re.sub(r'<input[^>]*(?:type=["\']email["\']|name=["\']email["\'])[^>]*>','',h,flags=re.I|re.S)
           h=h.replace('https://images.unsplash.com/photo-1516939884455-1445c8652f83?auto=format&fit=crop&w=1000&q=85','https://i.postimg.cc/1zvgDdzS/Screenshot-2026-09-01-205904.png')
-          # Keep the existing ordering layer, then load the isolated ordering-v4 layer last so it owns the product controls.
-          h=h.replace('</head>','<link rel="stylesheet" href="site-overrides.css"><link rel="stylesheet" href="ordering-v4.css"><script src="site-overrides.js" defer></script><script src="ordering-v4.js" defer></script></head>',1) if 'ordering-v4.js' not in h else h
+          # Load exactly one ordering implementation; no legacy cart scripts.
+          h=re.sub(r'<link[^>]+href=["\'](?:site-overrides\.css|ordering-v4\.css)["\'][^>]*>','',h,flags=re.I)
+          h=re.sub(r'<script[^>]+src=["\'](?:site-overrides\.js|ordering-v4\.js)["\'][^>]*>\s*</script>|<script[^>]+src=["\'](?:site-overrides\.js|ordering-v4\.js)["\'][^>]*></script>','',h,flags=re.I)
+          h=h.replace('</head>','<link rel="stylesheet" href="ordering-v4.css"><script src="ordering-v4.js" defer></script></head>',1)
           p.write_text(h.rstrip()+'\n',encoding='utf-8')
       - name: Setup Pages
         uses: actions/configure-pages@v5
