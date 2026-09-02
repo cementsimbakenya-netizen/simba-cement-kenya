@@ -1,0 +1,54 @@
+name: Publish Simba Cement site
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages-publish
+  cancel-in-progress: true
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Prepare published HTML
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p=Path('index.html')
+          h=p.read_text(encoding='utf-8')
+          h=re.sub(r'\s*<a\b[^>]*href=["\']#projects["\'][^>]*>.*?</a>\s*','\n',h,flags=re.I|re.S)
+          h=re.sub(r'\s*<section\b[^>]*id=["\']projects["\'][^>]*>.*?</section>\s*','\n',h,count=1,flags=re.I|re.S)
+          news='''<section id="news"><div class="container"><div class="section-head"><div class="eyebrow">NEWS &amp; UPDATES</div><h2>Latest Simba Cement updates.</h2><div class="redline"></div><p>Recent public updates connected to Simba Cement and National Cement Company Limited.</p></div><div class="news-grid"><article class="news-card" style="padding:28px"><small>7 AUGUST 2026 · INDUSTRY &amp; OPERATIONS</small><h3>Government orders closure of Simba Cement quarries in Rabai</h3><p>Kenya's Cabinet Secretary for Mining and Blue Economy ordered the immediate closure of Simba Cement quarries in Kabe Ribe, Rabai Sub-County, Kilifi County, after concerns were raised by residents.</p><a class="btn outline" href="https://ntvkenya.co.ke/news/cs-joho-orders-closure-of-simba-cement-quarries-in-rabai/" target="_blank" rel="noopener">READ SOURCE →</a></article><article class="news-card" style="padding:28px"><small>25 JULY 2026 · MANUFACTURING</small><h3>New clinker plant strengthens local cement supply</h3><p>Reporting on Cemtech Sebit in West Pokot highlighted increased local clinker production, reduced import dependence and regional export potential.</p><a class="btn outline" href="https://theweeklyvisionews.net/2026/07/25/kenyas-clinker-revolution-devki-groups-west-pokot-plant-positions-country-for-self-sufficiency-and-regional-exports/" target="_blank" rel="noopener">READ SOURCE →</a></article><article class="news-card" style="padding:28px"><small>22 JUNE 2026 · COMPANY VISIT</small><h3>India's High Commissioner visits Cemtech Eldoret</h3><p>The visit highlighted local manufacturing, industrialisation, employment and sustainable economic growth at Cemtech Eldoret.</p><a class="btn outline" href="https://cemtechlimited.com/2026/06/22/high-commissioner-of-india-to-kenya-visits-cemtech-eldoret-simba-cement/" target="_blank" rel="noopener">READ SOURCE →</a></article></div></div></section>'''
+          h=re.sub(r'\s*<section\b[^>]*id=["\']news["\'][^>]*>.*?</section>\s*','\n'+news+'\n',h,count=1,flags=re.I|re.S)
+          for pat in [r'\.projects\{[^}]*\}',r'\.project-grid\{[^}]*\}',r'\.project\{[^}]*\}',r'\.project:after\{[^}]*\}',r'\.project div\{[^}]*\}',r'\.project:nth-child\(\d+\)\{[^}]*\}']:
+              h=re.sub(pat,'',h)
+          # Rename product heading and links.
+          h=re.sub(r'(<h2[^>]*>)\s*Our Products\s*(</h2>)',r'\1SHOP / OUR PRODUCTS\2',h,count=1,flags=re.I)
+          h=h.replace('href="#products"','href="shop.html"')
+          # Remove email inputs and nearby labels.
+          h=re.sub(r'<label[^>]*>\s*Email.*?</label>','',h,flags=re.I|re.S)
+          h=re.sub(r'<input[^>]*(?:type=["\']email["\']|name=["\']email["\'])[^>]*>','',h,flags=re.I|re.S)
+          # Replace Why Choose Us image.
+          h=h.replace('https://images.unsplash.com/photo-1516939884455-1445c8652f83?auto=format&fit=crop&w=1000&q=85','https://i.postimg.cc/1zvgDdzS/Screenshot-2026-09-01-205904.png')
+          # Inject the modern WhatsApp controls once.
+          if 'site-overrides.js' not in h:
+              h=h.replace('</head>','<link rel="stylesheet" href="site-overrides.css"><script src="site-overrides.js" defer></script></head>',1)
+          p.write_text(h.rstrip()+'\n',encoding='utf-8')
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
