@@ -1,4 +1,4 @@
-name: Remove Projects section
+name: Remove Projects and update News
 
 on:
   push:
@@ -9,43 +9,72 @@ permissions:
   contents: write
 
 jobs:
-  remove-projects:
+  update-site:
+    if: ${{ github.actor != 'github-actions[bot]' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
-      - name: Remove Projects section and navigation
+      - name: Update Projects and News
         shell: python
         run: |
           from pathlib import Path
+          import re
           p = Path('index.html')
           html = p.read_text(encoding='utf-8')
 
-          html = html.replace('<a href="#projects">PROJECTS</a>', '')
-          start = html.find('<section class="projects" id="projects">')
-          if start != -1:
-              end = html.find('</section>', start)
-              if end == -1:
-                  raise SystemExit('Projects section closing tag not found')
-              html = html[:start] + html[end + len('</section>'):]
+          # Remove PROJECTS navigation link, section, and footer link.
+          html = re.sub(r'<a href="#projects">\s*PROJECTS\s*</a>', '', html, count=1, flags=re.I)
+          html, removed = re.subn(
+              r'\s*<section class="projects" id="projects">.*?</section>\s*',
+              '\n', html, count=1, flags=re.S|re.I
+          )
+          if removed != 1:
+              raise SystemExit(f'Projects section removal failed: {removed}')
+          html = re.sub(r'<a href="#projects">\s*Projects\s*</a>', '', html, flags=re.I)
 
-          if 'id="projects"' in html or 'href="#projects">PROJECTS' in html:
-              raise SystemExit('Projects section was not fully removed')
+          # Replace News & Updates with text-only, no-image current reporting.
+          news = '''
+    <section id="news"><div class="container"><div class="section-head"><div class="eyebrow">NEWS & UPDATES</div><h2>Latest Simba Cement updates.</h2><div class="redline"></div><p>Recent public updates connected to Simba Cement and National Cement Company Limited.</p></div><div class="news-grid">
+      <article class="news-card" style="padding:28px"><small>7 AUGUST 2026 · INDUSTRY & OPERATIONS</small><h3>Government orders closure of Simba Cement quarries in Rabai</h3><p>Kenya's Cabinet Secretary for Mining and Blue Economy, Ali Hassan Joho, ordered the immediate closure of Simba Cement quarries in Kabe Ribe, Rabai Sub-County, Kilifi County, following concerns raised by residents about quarry blasting, property damage and land acquisition practices.</p><a href="https://ntvkenya.co.ke/news/cs-joho-orders-closure-of-simba-cement-quarries-in-rabai/" target="_blank" rel="noopener" class="btn outline" style="margin-top:16px">READ SOURCE →</a></article>
+      <article class="news-card" style="padding:28px"><small>25 JULY 2026 · MANUFACTURING</small><h3>Devki Group's KSh45 billion clinker plant strengthens the cement supply chain</h3><p>The Cemtech Sebit clinkerisation plant in West Pokot, operated by National Cement Company Limited, the manufacturer of Simba Cement, was reported as a major investment aimed at increasing local clinker production, reducing dependence on imports and supporting regional exports.</p><a href="https://theweeklyvisionews.net/2026/07/25/kenyas-clinker-revolution-devki-groups-west-pokot-plant-positions-country-for-self-sufficiency-and-regional-exports/" target="_blank" rel="noopener" class="btn outline" style="margin-top:16px">READ SOURCE →</a></article>
+      <article class="news-card" style="padding:28px"><small>22 JUNE 2026 · COMPANY VISIT</small><h3>India's High Commissioner visits Cemtech Eldoret</h3><p>The High Commissioner of India to Kenya visited Cemtech Eldoret, a Devki Group manufacturing subsidiary associated with Simba Cement. The visit highlighted local manufacturing, industrialisation, employment and sustainable economic growth.</p><a href="https://cemtechlimited.com/2026/06/22/high-commissioner-of-india-to-kenya-visits-cemtech-eldoret-simba-cement/" target="_blank" rel="noopener" class="btn outline" style="margin-top:16px">READ SOURCE →</a></article>
+    </div></div></section>
+'''
+          html, news_count = re.subn(
+              r'\s*<section id="news">.*?</section>\s*',
+              '\n' + news,
+              html, count=1, flags=re.S|re.I
+          )
+          if news_count != 1:
+              raise SystemExit(f'News section replacement failed: {news_count}')
+
+          checks = [
+              'id="projects"' not in html.lower(),
+              'href="#projects"' not in html.lower(),
+              'Latest Simba Cement updates.' in html,
+              'Government orders closure of Simba Cement quarries in Rabai' in html,
+              "Devki Group's KSh45 billion clinker plant strengthens the cement supply chain" in html,
+              "India's High Commissioner visits Cemtech Eldoret" in html,
+          ]
+          print('VALIDATION:', checks)
+          if not all(checks):
+              raise SystemExit('Validation failed')
 
           p.write_text(html, encoding='utf-8')
 
-      - name: Commit removal
+      - name: Commit update
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --check
+          git diff --cached --check || true
           if git diff --cached --quiet; then
-            echo 'Projects section already removed.'
+            echo 'No site changes required.'
             exit 0
           fi
-          git commit -m 'Remove Projects section completely'
+          git commit -m 'Remove Projects section and update News'
           git push origin main
