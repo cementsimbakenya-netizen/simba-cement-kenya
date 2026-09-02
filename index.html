@@ -453,12 +453,7 @@
 }
 </style>
 
-<style id="final-hero-layout">
-.hero-carousel{min-height:760px!important}
-.hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}
-@media(max-width:900px){.hero-carousel{min-height:690px!important}}
-@media(max-width:600px){.hero-carousel{min-height:720px!important}}
-</style>
+
 <style id="fullscreen-hero-carousel">
 /* Match the supplied reference: large hero image, but not a giant browser-height panel. */
 .hero-carousel{
@@ -487,7 +482,23 @@
 @media(max-width:600px){
   .hero-carousel{height:600px!important;min-height:600px!important;max-height:600px!important}
 }
-</style></head>
+</style>
+<style id="final-hero-layout">
+.hero-carousel{min-height:760px!important}
+.hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}
+@media(max-width:900px){.hero-carousel{min-height:690px!important}}
+@media(max-width:600px){.hero-carousel{min-height:720px!important}}
+</style>
+<style id="solutions-words-only">
+#solutions .solutions-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0!important;background:#171717!important}
+#solutions .solution{height:210px!important;background-image:none!important;background:#171717!important;display:flex!important;align-items:center!important;justify-content:center!important;position:relative!important;border-right:1px solid rgba(255,255,255,.16)!important}
+#solutions .solution:last-child{border-right:0!important}
+#solutions .solution:after{display:none!important}
+#solutions .solution h3{position:static!important;margin:0!important;color:#fff!important;text-align:center!important;font-size:18px!important;line-height:1.2!important;letter-spacing:.8px!important}
+@media(max-width:900px){#solutions .solutions-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}#solutions .solution{height:150px!important}}
+@media(max-width:560px){#solutions .solutions-grid{grid-template-columns:1fr!important}#solutions .solution{height:110px!important;border-right:0!important;border-bottom:1px solid rgba(255,255,255,.16)!important}}
+</style>
+</head>
 <body>
   <div class="topbar"><div class="container">SIMBA CEMENT · STRENGTH WITHIN <span style="float:right">Call / WhatsApp: 0780 079 982</span></div></div>
   <header><div class="container nav"><a class="logo" href="#home" aria-label="Simba Cement home"><img src="https://i.postimg.cc/CKSsrtbF/Screenshot-2026-09-01-142431.png" alt="Simba Cement" class="logo-img"></a><nav class="links" id="navlinks"><a class="active" href="#home">HOME</a><a href="#products">PRODUCTS</a><a href="#about">ABOUT US</a><a href="#solutions">SOLUTIONS</a><a href="#quality">QUALITY & SUSTAINABILITY</a><a href="#projects">PROJECTS</a><a href="#news">NEWS & UPDATES</a><a href="#contact">CONTACT US</a></nav><a class="btn" href="#shop">📍 WHERE TO BUY</a><button class="hamb" id="hamb" aria-label="Open menu">☰</button></div></header>
