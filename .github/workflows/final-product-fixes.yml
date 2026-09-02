@@ -19,7 +19,7 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Apply supplied product photos directly to cards
+      - name: Apply supplied photos to visible Products section
         shell: python
         run: |
           from pathlib import Path
@@ -33,45 +33,50 @@ jobs:
               'Barbed Wire 610mts': 'https://i.postimg.cc/sDdq0ddt/Screenshot-2026-09-02-135513.png',
           }
 
-          def replace_card_photo(source, heading, image):
+          section_start = html.find('<section class="products reference-products" id="products">')
+          if section_start < 0:
+              raise SystemExit('Visible reference Products section not found')
+          section_end = html.find('</section>', section_start)
+          if section_end < 0:
+              raise SystemExit('Visible reference Products section end not found')
+          section_end += len('</section>')
+          section = html[section_start:section_end]
+
+          def replace_visible_card(section_html, heading, image):
               marker = '<h3>' + heading + '</h3>'
-              h3 = source.find(marker)
-              if h3 < 0:
-                  raise SystemExit(f'Heading not found: {heading}')
-
-              start = source.rfind('<article class="reference-product-card"', 0, h3)
-              if start < 0:
-                  raise SystemExit(f'Card start not found: {heading}')
-
-              end = source.find('</article>', h3)
-              if end < 0:
-                  raise SystemExit(f'Card end not found: {heading}')
-              end += len('</article>')
-
-              card = source[start:end]
+              h3_pos = section_html.find(marker)
+              if h3_pos < 0:
+                  raise SystemExit(f'Visible product heading not found: {heading}')
+              article_start = section_html.rfind('<article class="reference-product-card', 0, h3_pos)
+              if article_start < 0:
+                  raise SystemExit(f'Visible product card start not found: {heading}')
+              article_end = section_html.find('</article>', h3_pos)
+              if article_end < 0:
+                  raise SystemExit(f'Visible product card end not found: {heading}')
+              article_end += len('</article>')
+              card = section_html[article_start:article_end]
               image_re = re.compile(r'<div class="reference-product-image(?: reference-product-placeholder)?">.*?</div>', re.S)
               replacement = f'<div class="reference-product-image"><img src="{image}" alt="{heading}"></div>'
-              updated, count = image_re.subn(replacement, card, count=1)
-              if count != 1:
-                  raise SystemExit(f'Image container not found: {heading}')
-              return source[:start] + updated + source[end:]
+              updated, changed = image_re.subn(replacement, card, count=1)
+              if changed != 1:
+                  raise SystemExit(f'Visible product image container not found: {heading}')
+              return section_html[:article_start] + updated + section_html[article_end:]
 
           for heading, image in photos.items():
-              html = replace_card_photo(html, heading, image)
+              section = replace_visible_card(section, heading, image)
 
-          # Leave a deterministic marker so every successful run produces a real commit.
-          marker = '<!-- supplied-product-photos-locked -->'
-          html = re.sub(r'\s*<!-- supplied-product-photos-locked -->', '', html)
+          html = html[:section_start] + section + html[section_end:]
+
+          marker = '<!-- visible-reference-product-photos -->'
+          html = re.sub(r'\s*<!-- visible-reference-product-photos -->', '', html)
           html = html.replace('</body>', marker + '\n</body>', 1)
 
-          checks = [
-              'src="' + photos['Barbed Wire 480mts'] + '"' in html,
-              'src="' + photos['Barbed Wire 610mts'] + '"' in html,
-              marker in html,
-          ]
-          if not all(checks):
-              raise SystemExit(f'Validation failed: {checks}')
-          print('BARBED WIRE PRODUCT PHOTOS VERIFIED:', checks)
+          for heading, image in photos.items():
+              if image not in section:
+                  raise SystemExit(f'Validation failed: image missing in visible section: {heading}')
+          if 'reference-product-placeholder'><span>BARBED WIRE' in section:
+              raise SystemExit('Validation failed: placeholder remains in visible Products section')
+          print('VISIBLE PRODUCT PHOTOS VERIFIED')
 
       - name: Commit and push
         shell: bash
@@ -79,6 +84,11 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git diff --cached --quiet && exit 0
-          git commit -m 'Apply supplied Barbed Wire product photos'
+          git status --short
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No visible Products changes detected.'
+            exit 1
+          fi
+          git commit -m 'Apply supplied photos to visible Barbed Wire products'
           git push origin main
