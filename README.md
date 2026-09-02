@@ -22,3 +22,5 @@ Premium, responsive static website for Simba Cement Kenya.
 GitHub Actions deploys the `main` branch to GitHub Pages. After enabling Pages for the repository, use the generated Pages URL as the live site until a custom domain is connected.
 
 Before production launch, replace any remaining temporary domain references with the real domain and verify all business claims, prices, imagery, legal details and contact information.
+
+<!-- product image deployment trigger -->
