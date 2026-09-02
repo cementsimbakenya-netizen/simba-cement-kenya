@@ -1,0 +1,89 @@
+name: Apply supplied Chainlink image
+
+on:
+  workflow_run:
+    workflows: ["Apply reference Products section"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  chainlink-images:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Put supplied photo on all Chainlink products
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          image = 'https://i.postimg.cc/L4f8GpwL/Screenshot-2026-09-02-133720.png'
+
+          products = {
+              'chain4': ('CHAINLINK 4FT X 18MTS', 2000, 'Chainlink 4ft × 18mts'),
+              'chain5': ('CHAINLINK 5FT X 18MTS', 2500, 'Chainlink 5ft × 18mts'),
+              'chain6': ('CHAINLINK 6FT X 18MTS', 3000, 'Chainlink 6ft × 18mts'),
+              'chain7': ('CHAINLINK 7FT X 18MTS', 3500, 'Chainlink 7ft × 18mts'),
+          }
+
+          for pid, (label, price, pretty) in products.items():
+              placeholder = re.compile(
+                  r'<div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>[^<]+ FT × 18 M</span></div>'
+              )
+              # Replace the placeholder associated with the exact product card only.
+              card_pattern = re.compile(
+                  r'(<article class="reference-product-card">\s*'
+                  r'<div class="reference-product-image reference-product-placeholder"><span>CHAINLINK<br>[^<]+ FT × 18 M</span></div>\s*'
+                  r'<div class="reference-product-body">\s*'
+                  r'<div class="reference-category">FENCING</div>\s*'
+                  r'<h3>' + re.escape(pretty) + r'</h3>.*?</article>)',
+                  re.S
+              )
+              m = card_pattern.search(s)
+              if m:
+                  card = m.group(1)
+                  card = re.sub(
+                      r'<div class="reference-product-image reference-product-placeholder"><span>.*?</span></div>',
+                      f'<div class="reference-product-image"><img src="{image}" alt="{pretty}"></div>',
+                      card,
+                      count=1,
+                      flags=re.S,
+                  )
+                  s = s[:m.start(1)] + card + s[m.end(1):]
+              else:
+                  raise SystemExit(f'Could not locate {pretty} card')
+
+          # Keep the supplied image presentation clean and consistent with the reference product cards.
+          css = '''<style id="supplied-chainlink-images">
+          .reference-product-image img[src*="L4f8GpwL"]{width:100%;height:100%;display:block;object-fit:contain;object-position:center;background:#fff}
+          </style>'''
+          s = re.sub(r'<style id="supplied-chainlink-images">.*?</style>', '', s, flags=re.S|re.I)
+          s = s.replace('</head>', css + '\n</head>', 1)
+
+          p.write_text(s, encoding='utf-8')
+          print('CHAINLINK_IMAGE_APPLIED=', image in s)
+          for pid, (_, _, pretty) in products.items():
+              print(pretty, '=', pretty in s and image in s)
+
+      - name: Commit Chainlink image update
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          if git diff --cached --quiet; then
+            echo 'No changes.'
+          else
+            git commit -m 'Use supplied Chainlink photo on all Chainlink products'
+            git push origin main
+          fi
