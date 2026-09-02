@@ -32,18 +32,18 @@ jobs:
           barbed610_image = 'https://i.postimg.cc/sDdq0ddt/Screenshot-2026-09-02-135513.png'
 
           def patch_card(source, heading, image, alt):
-              pattern = re.compile(
-                  r'(<article\\b[^>]*class=["\\\']reference-product-card(?:\\s[^"\\\']*)?["\\\'][^>]*>.*?<h3>'
+              card_pattern = re.compile(
+                  r'(<article[^>]*class=["\']reference-product-card[^>]*>.*?<h3>'
                   + re.escape(heading) + r'</h3>.*?</article>)',
                   re.S | re.I
               )
-              match = pattern.search(source)
+              match = card_pattern.search(source)
               if not match:
                   raise SystemExit(f'Product card not found: {heading}')
 
               card = match.group(1)
               image_pattern = re.compile(
-                  r'<div class=["\\\']reference-product-image(?:\\s+reference-product-placeholder)?["\\\']>.*?</div>',
+                  r'<div class=["\']reference-product-image(?: +reference-product-placeholder)?["\']>.*?</div>',
                   re.S | re.I
               )
               new_image = f'<div class="reference-product-image"><img src="{image}" alt="{alt}"></div>'
@@ -106,13 +106,6 @@ jobs:
             background:#fff!important;
             color:#c91f2d!important;
           }
-          @media(max-width:560px){
-            #products .reference-steel-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important}
-            #products .reference-steel-list>div{grid-template-columns:auto minmax(0,1fr) auto!important;gap:3px!important;padding:4px 5px!important}
-            #products .reference-steel-list strong{font-size:9px!important}
-            #products .reference-steel-list span{font-size:8px!important}
-            #products .reference-steel-list button{font-size:8px!important;padding:3px 5px!important}
-          }
           #products .reference-product-image img[src*="L4f8GpwL"],
           #products .reference-product-image img[src*="sDdq0ddt"]{
             width:100%!important;
@@ -122,6 +115,13 @@ jobs:
             object-position:center!important;
             background:#fff!important;
           }
+          @media(max-width:560px){
+            #products .reference-steel-list{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:4px!important}
+            #products .reference-steel-list>div{grid-template-columns:auto minmax(0,1fr) auto!important;gap:3px!important;padding:4px 5px!important}
+            #products .reference-steel-list strong{font-size:9px!important}
+            #products .reference-steel-list span{font-size:8px!important}
+            #products .reference-steel-list button{font-size:8px!important;padding:3px 5px!important}
+          }
           </style>'''
 
           html = re.sub(r'<style id="simba-final-product-fixes">.*?</style>', '', html, flags=re.S | re.I)
@@ -130,13 +130,11 @@ jobs:
           else:
               html += css
 
-          path.write_text(html, encoding='utf-8')
-
           checks = [
-              chainlink_image in html,
               html.count(chainlink_image) >= 4,
               barbed610_image in html,
               'simba-final-product-fixes' in html,
+              all(h in html for h in ['Chainlink 4ft × 18mts','Chainlink 5ft × 18mts','Chainlink 6ft × 18mts','Chainlink 7ft × 18mts']),
           ]
           if not all(checks):
               raise SystemExit(f'Validation failed: {checks}')
