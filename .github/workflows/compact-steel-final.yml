@@ -19,25 +19,68 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Make reinforcement sizes smaller and compact
+      - name: Make reinforcement sizes small and fit each cell
         shell: python
         run: |
           from pathlib import Path
           import re
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
+
           css = '''<style id="compact-steel-final">
-          .reference-steel-list{display:grid!important;grid-template-columns:1fr 1fr!important;gap:5px!important;margin-top:12px!important}
-          .reference-steel-list>div{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;gap:5px!important;align-items:center!important;padding:5px 6px!important;border-radius:4px!important}
-          .reference-steel-list strong{font-size:11px!important;line-height:1!important}
-          .reference-steel-list span{font-size:11px!important;white-space:nowrap!important}
-          .reference-steel-list button{font-size:10px!important;padding:4px 6px!important;min-height:0!important;line-height:1!important}
-          @media(max-width:560px){.reference-steel-list{grid-template-columns:1fr 1fr!important}.reference-steel-list>div{gap:4px!important;padding:4px 5px!important}.reference-steel-list strong,.reference-steel-list span{font-size:10px!important}.reference-steel-list button{font-size:9px!important;padding:4px 5px!important}}
+          .reference-steel-list{
+            display:grid!important;
+            grid-template-columns:1fr 1fr!important;
+            gap:5px!important;
+            margin-top:12px!important;
+          }
+          .reference-steel-list>div{
+            display:grid!important;
+            grid-template-columns:minmax(0,1fr) auto auto!important;
+            gap:5px!important;
+            align-items:center!important;
+            min-width:0!important;
+            padding:5px 6px!important;
+            border-radius:4px!important;
+            overflow:hidden!important;
+          }
+          .reference-steel-list strong{
+            font-size:11px!important;
+            line-height:1!important;
+            white-space:nowrap!important;
+            min-width:0!important;
+          }
+          .reference-steel-list span{
+            font-size:10px!important;
+            line-height:1!important;
+            white-space:nowrap!important;
+          }
+          .reference-steel-list button{
+            font-size:9px!important;
+            padding:4px 6px!important;
+            min-height:0!important;
+            line-height:1!important;
+            white-space:nowrap!important;
+          }
+          @media(max-width:1250px){
+            .reference-steel-list>div{gap:4px!important;padding:5px!important}
+            .reference-steel-list strong{font-size:10px!important}
+            .reference-steel-list span{font-size:9px!important}
+            .reference-steel-list button{font-size:8px!important;padding:4px 5px!important}
+          }
+          @media(max-width:560px){
+            .reference-steel-list{grid-template-columns:1fr 1fr!important;gap:4px!important}
+            .reference-steel-list>div{gap:3px!important;padding:4px!important}
+            .reference-steel-list strong{font-size:9px!important}
+            .reference-steel-list span{font-size:8px!important}
+            .reference-steel-list button{font-size:8px!important;padding:3px 4px!important}
+          }
           </style>'''
+
           s = re.sub(r'<style id="compact-steel-final">.*?</style>', '', s, flags=re.S|re.I)
           s = s.replace('</head>', css + '\n</head>', 1)
           p.write_text(s, encoding='utf-8')
-          print('COMPACT STEEL FINAL APPLIED')
+          print('SMALL STEEL CELLS APPLIED')
 
       - name: Commit
         shell: bash
@@ -48,6 +91,6 @@ jobs:
           if git diff --cached --quiet; then
             echo 'No changes.'
           else
-            git commit -m 'Make reinforcement steel options smaller and compact'
+            git commit -m 'Make reinforcement steel cells fit cleanly in two columns'
             git push origin main
           fi
