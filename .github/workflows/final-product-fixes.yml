@@ -71,11 +71,13 @@ jobs:
           html = re.sub(r'\s*<!-- visible-reference-product-photos -->', '', html)
           html = html.replace('</body>', marker + '\n</body>', 1)
 
+          old480 = '<div class="reference-product-image reference-product-placeholder"><span>BARBED WIRE<br>480 M</span></div>'
+          old610 = '<div class="reference-product-image reference-product-placeholder"><span>BARBED WIRE<br>610 M</span></div>'
           checks = [
-              all(image in section for image in photos.values()),
-              'Barbed Wire 480mts' in section,
-              'Barbed Wire 610mts' in section,
-              'reference-product-placeholder' not in section,
+              'src="' + photos['Barbed Wire 480mts'] + '"' in section,
+              'src="' + photos['Barbed Wire 610mts'] + '"' in section,
+              old480 not in section,
+              old610 not in section,
               marker in html,
           ]
           if not all(checks):
