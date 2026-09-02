@@ -1,0 +1,78 @@
+name: Add hero carousel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  carousel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Add hero carousel to homepage
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          css_marker = '.hero-slide{position:absolute;'
+          if css_marker not in s:
+              s = s.replace(
+                  ".hero{min-height:640px;display:flex;align-items:center;background:",
+                  ".hero{min-height:640px;display:flex;align-items:center;position:relative;overflow:hidden;background:",
+                  1
+              )
+              s = s.replace(
+                  "center/cover}.hero-inner{width:100%;padding:80px 0}",
+                  "center/cover}.hero-slide{position:absolute;inset:0;background-position:center;background-size:cover;opacity:0;transition:opacity .7s ease}.hero-slide.active{opacity:1}.hero-slide:after{content:\"\";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.9) 42%,rgba(20,20,20,.15) 70%)}.hero-content{position:relative;z-index:2;width:100%}.hero-inner{width:100%;padding:80px 0}.hero-dots{position:absolute;z-index:4;left:50%;bottom:30px;transform:translateX(-50%);display:flex;gap:9px}.hero-dot{width:10px;height:10px;border-radius:50%;border:1px solid #fff;background:rgba(255,255,255,.45);padding:0}.hero-dot.active{background:var(--blue);border-color:var(--blue)}.hero-arrow{position:absolute;z-index:4;top:50%;transform:translateY(-50%);width:46px;height:46px;border:1px solid rgba(255,255,255,.7);background:rgba(0,0,0,.25);color:#fff;font-size:24px}.hero-prev{left:24px}.hero-next{right:24px}.hero-arrow:hover{background:var(--blue)}",
+                  1
+              )
+
+          pattern = r'<section class="hero" id="home">.*?</section>'
+          replacement = '''<section class="hero" id="home" aria-label="Simba Cement featured carousel">
+                <div class="hero-slide active" data-slide style="background-image:url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1800&q=85')"></div>
+                <div class="hero-slide" data-slide style="background-image:url('https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1800&q=85')"></div>
+                <div class="hero-slide" data-slide style="background-image:url('https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1800&q=85')"></div>
+                <div class="container hero-content"><div class="hero-inner"><div class="eyebrow">SIMBA CEMENT · KENYA</div><h1>BUILT TO LAST.<br>BUILT FOR <em>GENERATIONS.</em></h1><p>Premium quality cement for strong and durable structures that stand the test of time.</p><div class="actions"><a class="btn" href="#products">OUR PRODUCTS →</a><a class="btn outline" href="#contact">FIND A DISTRIBUTOR →</a></div></div></div>
+                <button class="hero-arrow hero-prev" id="heroPrev" aria-label="Previous slide">‹</button><button class="hero-arrow hero-next" id="heroNext" aria-label="Next slide">›</button>
+                <div class="hero-dots" id="heroDots" aria-label="Choose hero slide"><button class="hero-dot active" aria-label="Slide 1"></button><button class="hero-dot" aria-label="Slide 2"></button><button class="hero-dot" aria-label="Slide 3"></button></div>
+              </section>'''
+          s, count = re.subn(pattern, replacement, s, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit('Hero section was not found; no changes made.')
+
+          js_marker = 'const heroSlides=['
+          if js_marker not in s:
+              needle = "document.getElementById('cartBtn').onclick=openCart;"
+              js = '''const heroSlides=[...document.querySelectorAll('[data-slide]')],heroDots=[...document.querySelectorAll('.hero-dot')];let heroIndex=0,heroTimer;
+              function showHero(i){heroIndex=(i+heroSlides.length)%heroSlides.length;heroSlides.forEach((slide,n)=>slide.classList.toggle('active',n===heroIndex));heroDots.forEach((dot,n)=>dot.classList.toggle('active',n===heroIndex))}
+              function nextHero(){showHero(heroIndex+1)}function prevHero(){showHero(heroIndex-1)}function resetHeroTimer(){clearInterval(heroTimer);heroTimer=setInterval(nextHero,5000)}
+              document.getElementById('heroNext').onclick=()=>{nextHero();resetHeroTimer()};document.getElementById('heroPrev').onclick=()=>{prevHero();resetHeroTimer()};heroDots.forEach((dot,n)=>dot.onclick=()=>{showHero(n);resetHeroTimer()});resetHeroTimer();
+              '''
+              if needle not in s:
+                  raise SystemExit('Cart initialization marker not found; no changes made.')
+              s = s.replace(needle, js + needle, 1)
+
+          # Mobile overlay must apply to the slides, not to the hero container.
+          s = s.replace(
+              ".topbar{display:none}.hero{min-height:650px;background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(255,255,255,.88) 55%,rgba(255,255,255,.35)),url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1000&q=80') center/cover}.hero h1",
+              ".topbar{display:none}.hero{min-height:650px}.hero-slide:after{background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(255,255,255,.88) 55%,rgba(255,255,255,.35))}.hero h1",
+              1
+          )
+          p.write_text(s, encoding='utf-8')
+      - name: Commit carousel
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Add responsive hero image carousel"
+          git push
