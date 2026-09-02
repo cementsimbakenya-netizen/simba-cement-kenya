@@ -460,28 +460,32 @@
 @media(max-width:600px){.hero-carousel{min-height:720px!important}}
 </style>
 <style id="fullscreen-hero-carousel">
+/* Match the supplied reference: large hero image, but not a giant browser-height panel. */
 .hero-carousel{
-  height:calc(100vh - 82px)!important;
-  min-height:720px!important;
-  max-height:none!important;
+  height:650px!important;
+  min-height:650px!important;
+  max-height:650px!important;
+  overflow:hidden!important;
 }
 .hero-carousel .hero-slide{
+  position:absolute!important;
   inset:0!important;
   background-size:cover!important;
   background-position:center center!important;
+  background-repeat:no-repeat!important;
 }
-.hero-carousel .hero-overlay{
-  background:linear-gradient(90deg,rgba(255,255,255,.78) 0%,rgba(255,255,255,.60) 34%,rgba(255,255,255,.16) 68%,rgba(18,26,34,.04) 100%)!important;
-}
+/* Remove the extra overlay layer that was washing the photographs out. */
+.hero-carousel .hero-slide:after{background:linear-gradient(90deg,rgba(255,255,255,.70) 0%,rgba(255,255,255,.42) 30%,rgba(255,255,255,.08) 62%,rgba(18,26,34,.02) 100%)!important}
+.hero-carousel .hero-overlay{display:none!important}
 .hero-carousel .hero-arrow,.hero-carousel .hero-dots{display:none!important}
-.hero-carousel .hero-inner{padding:0!important;display:flex;align-items:center;min-height:inherit!important}
-.hero-carousel .hero-content{height:100%!important;display:flex;align-items:center!important}
+.hero-carousel .hero-content{height:100%!important;display:flex!important;align-items:center!important}
+.hero-carousel .hero-inner{padding:65px 0!important}
 @media(max-width:900px){
-  .hero-carousel{height:calc(100vh - 70px)!important;min-height:650px!important}
-  .hero-carousel .hero-overlay{background:linear-gradient(180deg,rgba(255,255,255,.72) 0%,rgba(255,255,255,.48) 58%,rgba(18,26,34,.08) 100%)!important}
+  .hero-carousel{height:620px!important;min-height:620px!important;max-height:620px!important}
+  .hero-carousel .hero-slide:after{background:linear-gradient(180deg,rgba(255,255,255,.70) 0%,rgba(255,255,255,.34) 55%,rgba(255,255,255,.06) 100%)!important}
 }
 @media(max-width:600px){
-  .hero-carousel{height:calc(100vh - 70px)!important;min-height:680px!important}
+  .hero-carousel{height:600px!important;min-height:600px!important;max-height:600px!important}
 }
 </style></head>
 <body>
