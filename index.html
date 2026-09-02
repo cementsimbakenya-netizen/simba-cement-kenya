@@ -89,6 +89,23 @@
 .logo-img{width:230px!important;height:82px!important;display:block!important;flex:0 0 230px!important;object-fit:cover!important;object-position:center!important;background:#fff!important;border:0!important;outline:0!important;box-shadow:none!important;transform:scale(1.17)!important;transform-origin:center!important}
 @media(max-width:900px){.logo{min-width:190px!important;width:190px!important;height:70px!important}.logo-img{width:190px!important;height:70px!important;flex-basis:190px!important;transform:scale(1.12)!important}.hero-carousel{min-height:650px}.hero-carousel .hero-overlay{background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(255,255,255,.9) 55%,rgba(255,255,255,.3) 100%)}}
 
+  
+.hero-carousel{min-height:640px;position:relative;display:flex;align-items:center;overflow:hidden;background:#eef2f5}
+.hero-carousel .hero-slide{position:absolute;inset:0;background-position:center;background-size:cover;background-repeat:no-repeat;opacity:0;transform:scale(1.02);transition:opacity .7s ease,transform 5s ease;z-index:0}
+.hero-carousel .hero-slide.active{opacity:1;transform:scale(1)}
+.hero-carousel .hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.9) 40%,rgba(255,255,255,.15) 74%,rgba(18,26,34,.08) 100%)}
+.hero-carousel .hero-content{position:relative;z-index:2;width:100%}
+.hero-carousel .hero-inner{width:100%;padding:80px 0}
+.hero-carousel .hero-arrow{position:absolute;z-index:4;top:50%;transform:translateY(-50%);width:48px;height:48px;border:1px solid rgba(255,255,255,.8);border-radius:50%;background:rgba(18,26,34,.42);color:#fff;font-size:34px;line-height:1;display:grid;place-items:center}
+.hero-carousel .hero-prev{left:24px}.hero-carousel .hero-next{right:24px}
+.hero-carousel .hero-dots{position:absolute;z-index:4;left:50%;bottom:22px;transform:translateX(-50%);display:flex;gap:8px}
+.hero-carousel .hero-dot{width:11px;height:11px;padding:0;border-radius:50%;border:1px solid #fff;background:rgba(255,255,255,.52)}
+.hero-carousel .hero-dot.active{background:#245a8d;border-color:#245a8d}
+.hero-carousel .btn.outline{background:rgba(255,255,255,.9)}
+.logo{min-width:230px!important;width:230px!important;height:82px!important;padding:0!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;background:#fff!important;border:0!important;outline:0!important;box-shadow:none!important;overflow:hidden!important}
+.logo-img{width:230px!important;height:82px!important;display:block!important;flex:0 0 230px!important;object-fit:cover!important;object-position:center!important;background:#fff!important;border:0!important;outline:0!important;box-shadow:none!important;transform:scale(1.17)!important;transform-origin:center!important}
+@media(max-width:900px){.logo{min-width:190px!important;width:190px!important;height:70px!important}.logo-img{width:190px!important;height:70px!important;flex-basis:190px!important;transform:scale(1.12)!important}.hero-carousel{min-height:650px}.hero-carousel .hero-overlay{background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(255,255,255,.9) 55%,rgba(255,255,255,.3) 100%)}}
+
   </style>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"LocalBusiness","name":"Simba Cement Kenya","description":"Cement and building materials supplier serving customers from Athi River and Salgaa, Kenya.","telephone":"+254780079982","email":"cementsimbakenya@gmail.com","areaServed":"Kenya","location":[{"@type":"Place","name":"Athi River"},{"@type":"Place","name":"Salgaa"}],"contactPoint":{"@type":"ContactPoint","telephone":"+254780079982","contactType":"customer service","availableLanguage":["English"]}}</script>
 </head>
