@@ -1,0 +1,57 @@
+name: Apply supplied About Us copy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-about:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Replace About Us section
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          pattern = re.compile(r'<section\b[^>]*\bid=["\']about["\'][^>]*>.*?</section>', re.S | re.I)
+          m = pattern.search(s)
+          if not m:
+              raise SystemExit('Could not find #about section')
+
+          replacement = '''<section id="about"><div class="container about"><div class="about-text">
+          <div class="eyebrow">ABOUT US</div>
+          <h2>BUILDING KENYA, ONE PROJECT AT A TIME.</h2>
+          <div class="redline"></div>
+          <p>Simba Cement is built around dependable construction materials for homes, businesses and infrastructure projects across Kenya. Production and supply under the Simba Cement brand began in 2010, supporting customers with locally available cement for everyday building needs.</p>
+          <p>As demand grew, National Cement Company Limited expanded grinding capacity fivefold in 2013. The business also developed local clinker production at Merueshi, Kenya, strengthening the local supply chain and reducing reliance on imported core raw materials.</p>
+          <p>Today, our focus is straightforward: dependable products, practical service and a convenient way for customers to place orders and speak directly with our sales team.</p>
+          <div class="stats">
+            <div class="stat"><b>SERVICE LOCATIONS</b><span>Nairobi · Athi River (Off Lukenya Rd) · Nakuru · Rongai · Salgaa</span></div>
+            <div class="stat"><b>CUSTOMER ORDERS</b><span>0756 311 102 · WhatsApp</span></div>
+          </div>
+          <div class="actions"><a class="btn" href="#contact">CONTACT SALES →</a></div>
+          </div><div class="factory" role="img" aria-label="Industrial construction environment"></div></div></section>'''
+
+          s = s[:m.start()] + replacement + s[m.end():]
+          p.write_text(s, encoding='utf-8')
+
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Update About Us copy [skip ci]'
+          git pull --rebase origin main
+          git push origin HEAD:main
