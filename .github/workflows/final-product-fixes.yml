@@ -71,12 +71,16 @@ jobs:
           html = re.sub(r'\s*<!-- visible-reference-product-photos -->', '', html)
           html = html.replace('</body>', marker + '\n</body>', 1)
 
-          for heading, image in photos.items():
-              if image not in section:
-                  raise SystemExit(f'Validation failed: image missing in visible section: {heading}')
-          if 'reference-product-placeholder'><span>BARBED WIRE' in section:
-              raise SystemExit('Validation failed: placeholder remains in visible Products section')
-          print('VISIBLE PRODUCT PHOTOS VERIFIED')
+          checks = [
+              all(image in section for image in photos.values()),
+              'Barbed Wire 480mts' in section,
+              'Barbed Wire 610mts' in section,
+              'reference-product-placeholder' not in section,
+              marker in html,
+          ]
+          if not all(checks):
+              raise SystemExit(f'Validation failed: {checks}')
+          print('VISIBLE PRODUCT PHOTOS VERIFIED', checks)
 
       - name: Commit and push
         shell: bash
